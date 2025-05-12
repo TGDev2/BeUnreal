@@ -1,0 +1,134 @@
+import { useEffect, useState } from 'react';
+import {
+    IonAvatar,
+    IonButton,
+    IonContent,
+    IonHeader,
+    IonIcon,
+    IonInput,
+    IonItem,
+    IonLabel,
+    IonList,
+    IonPage,
+    IonSpinner,
+    IonTitle,
+    IonToast,
+    IonToolbar,
+} from '@ionic/react';
+import { logOutOutline, personCircleOutline } from 'ionicons/icons';
+import { useAuth } from '../contexts/AuthContext';
+import { getProfile, upsertProfile, UserProfile } from '../services/userService';
+
+const Profile: React.FC = () => {
+    const { session, signOut } = useAuth();
+    const uid = session?.user.id;
+    const [loading, setLoading] = useState(true);
+    const [profile, setProfile] = useState<UserProfile | null>(null);
+    const [username, setUsername] = useState('');
+    const [avatarUrl, setAvatarUrl] = useState('');
+    const [toast, setToast] = useState<string>();
+
+    /* Charge le profil à l’ouverture. */
+    useEffect(() => {
+        const fetch = async () => {
+            if (!uid) return;
+            try {
+                const data = await getProfile(uid);
+                setProfile(data);
+                setUsername(data?.username ?? '');
+                setAvatarUrl(data?.avatar_url ?? '');
+            } catch (e: any) {
+                setToast(e.message);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetch();
+    }, [uid]);
+
+    /* Sauvegarde les modifications. */
+    const save = async () => {
+        if (!uid) return;
+        try {
+            await upsertProfile({ id: uid, username, avatar_url: avatarUrl });
+            setToast('Profile updated');
+        } catch (e: any) {
+            setToast(e.message);
+        }
+    };
+
+    if (loading) {
+        return (
+            <IonPage>
+                <IonHeader>
+                    <IonToolbar>
+                        <IonTitle>Profile</IonTitle>
+                    </IonToolbar>
+                </IonHeader>
+                <IonContent className="ion-padding" fullscreen>
+                    <IonSpinner name="crescent" />
+                </IonContent>
+            </IonPage>
+        );
+    }
+
+    return (
+        <IonPage>
+            <IonHeader>
+                <IonToolbar>
+                    <IonTitle>Profile</IonTitle>
+                </IonToolbar>
+            </IonHeader>
+
+            <IonContent className="ion-padding" fullscreen>
+                <IonList>
+                    <IonItem lines="none" className="ion-text-center">
+                        {avatarUrl ? (
+                            <IonAvatar slot="start">
+                                <img src={avatarUrl} alt="Avatar" />
+                            </IonAvatar>
+                        ) : (
+                            <IonIcon icon={personCircleOutline} size="large" />
+                        )}
+                    </IonItem>
+
+                    <IonItem>
+                        <IonLabel position="stacked">Username</IonLabel>
+                        <IonInput
+                            value={username}
+                            onIonChange={(e) => setUsername(e.detail.value ?? '')}
+                            placeholder="Choose a display name"
+                        />
+                    </IonItem>
+
+                    <IonItem>
+                        <IonLabel position="stacked">Avatar URL</IonLabel>
+                        <IonInput
+                            value={avatarUrl}
+                            onIonChange={(e) => setAvatarUrl(e.detail.value ?? '')}
+                            placeholder="https://example.com/avatar.png"
+                        />
+                    </IonItem>
+                </IonList>
+
+                <IonButton expand="block" onClick={save}>
+                    Save
+                </IonButton>
+
+                <IonButton expand="block" fill="outline" color="medium" onClick={signOut}>
+                    <IonIcon icon={logOutOutline} slot="start" />
+                    Sign&nbsp;Out
+                </IonButton>
+
+                <IonToast
+                    isOpen={!!toast}
+                    message={toast}
+                    duration={2500}
+                    onDidDismiss={() => setToast(undefined)}
+                />
+            </IonContent>
+        </IonPage>
+    );
+};
+
+export default Profile;

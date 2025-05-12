@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { Session } from '@supabase/supabase-js';
 import { supabase } from '../services/supabaseClient';
+import { upsertProfile } from '../services/userService';
 
 interface AuthContextValue {
     session: Session | null;
@@ -43,7 +44,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     const signUp = async ({ email, password }: { email: string; password: string }) => {
         setLoading(true);
-        const { error } = await supabase.auth.signUp({ email, password });
+        const { data, error } = await supabase.auth.signUp({ email, password });
+
+        // Crée le profil immédiatement (username et avatar null par défaut)
+        if (!error && data.user) {
+            try {
+                await upsertProfile({ id: data.user.id });
+            } catch (profileError) {
+                // Ne bloque pas l'inscription si l'insert échoue
+                console.error(profileError);
+            }
+        }
+
         setLoading(false);
         if (error) throw error;
     };
