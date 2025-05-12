@@ -4,6 +4,7 @@ import { IonReactRouter } from '@ionic/react-router';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Profile from './pages/Profile';
+import FindFriends from './pages/FindFriends';
 import { AuthProvider } from './contexts/AuthContext';
 import PrivateRoute from './components/PrivateRoute';
 
@@ -36,6 +37,7 @@ const App: React.FC = () => (
           <Route exact path="/login" component={Login} />
           <PrivateRoute exact path="/home" component={Home} />
           <PrivateRoute exact path="/profile" component={Profile} />
+          <PrivateRoute exact path="/friends" component={FindFriends} />
           <Route exact path="/">
             <Redirect to="/home" />
           </Route>

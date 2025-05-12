@@ -4,6 +4,8 @@ import { supabase } from './supabaseClient';
 export interface UserProfile {
     id: string;              // identique à auth.users.id
     username: string | null;
+    /** Adresse email (copiée depuis auth.users lors de l'inscription) */
+    email: string | null;
     avatar_url: string | null;
     created_at: string;
 }
@@ -33,10 +35,7 @@ export const getProfile = async (userId: string): Promise<UserProfile | null> =>
 export const upsertProfile = async (
     profile: Partial<UserProfile> & { id: string },
 ): Promise<void> => {
-    const { error } = await supabase
-        .from(TABLE)
-        .upsert(profile, { onConflict: 'id' });
-
+    const { error } = await supabase.from(TABLE).upsert(profile, { onConflict: 'id' });
     if (error) throw error;
 };
 

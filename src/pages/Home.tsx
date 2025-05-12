@@ -24,6 +24,9 @@ const Home: React.FC = () => {
         <IonButton expand="block" onClick={() => history.push('/profile')}>
           My Profile
         </IonButton>
+        <IonButton expand="block" fill="outline" onClick={() => history.push('/friends')}>
+          Find friends
+        </IonButton>
       </IonContent>
     </IonPage>
   );

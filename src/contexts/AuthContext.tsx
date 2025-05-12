@@ -49,9 +49,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         // Crée le profil immédiatement (username et avatar null par défaut)
         if (!error && data.user) {
             try {
-                await upsertProfile({ id: data.user.id });
+                await upsertProfile({ id: data.user.id, email });
             } catch (profileError) {
-                // Ne bloque pas l'inscription si l'insert échoue
                 console.error(profileError);
             }
         }
