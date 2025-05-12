@@ -2,6 +2,7 @@ import {
     IonButton,
     IonContent,
     IonHeader,
+    IonIcon,
     IonInput,
     IonItem,
     IonLabel,
@@ -12,8 +13,10 @@ import {
     IonSpinner,
     IonToast,
 } from '@ionic/react';
+import { cameraOutline, sendOutline } from 'ionicons/icons';
 import { useEffect, useRef, useState } from 'react';
 import { RouteComponentProps } from 'react-router';
+import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { useAuth } from '../contexts/AuthContext';
 import {
     fetchConversation,
@@ -22,6 +25,7 @@ import {
     subscribeToConversation,
 } from '../services/messageService';
 import { getProfile, UserProfile } from '../services/userService';
+import { uploadChatImage } from '../services/mediaService';
 
 interface MatchParams {
     id: string; // contactId
@@ -60,8 +64,8 @@ const Chat: React.FC<RouteComponentProps<MatchParams>> = ({ match }) => {
 
     /* Abonnement temps réel */
     useEffect(() => {
-        const unsubscribe = subscribeToConversation(uid, contactId, msg =>
-            setMessages(prev => [...prev, msg]),
+        const unsubscribe = subscribeToConversation(uid, contactId, (msg) =>
+            setMessages((prev) => [...prev, msg]),
         );
         return unsubscribe;
     }, [uid, contactId]);
@@ -71,7 +75,8 @@ const Chat: React.FC<RouteComponentProps<MatchParams>> = ({ match }) => {
         bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages]);
 
-    const handleSend = async () => {
+    /** Envoi d'un texte */
+    const handleSendText = async () => {
         const trimmed = text.trim();
         if (!trimmed) return;
         setText('');
@@ -82,6 +87,30 @@ const Chat: React.FC<RouteComponentProps<MatchParams>> = ({ match }) => {
                 content: trimmed,
             });
         } catch (e: any) {
+            setToast(e.message);
+        }
+    };
+
+    /** Capture d'une photo, upload, puis envoi */
+    const handleCapturePhoto = async () => {
+        try {
+            const photo = await Camera.getPhoto({
+                quality: 80,
+                resultType: CameraResultType.DataUrl,
+                source: CameraSource.Camera,
+            });
+
+            if (!photo.dataUrl) return;
+            const publicUrl = await uploadChatImage(photo.dataUrl);
+
+            await sendMessage({
+                senderId: uid,
+                recipientId: contactId,
+                imageUrl: publicUrl,
+            });
+        } catch (e: any) {
+            // Annulation silencieuse si l’utilisateur ferme la caméra sans prendre de photo
+            if (e?.message?.includes('User cancelled')) return;
             setToast(e.message);
         }
     };
@@ -100,15 +129,21 @@ const Chat: React.FC<RouteComponentProps<MatchParams>> = ({ match }) => {
                 {!busy && (
                     <>
                         <IonList lines="none">
-                            {messages.map(m => (
+                            {messages.map((m) => (
                                 <IonItem
                                     key={m.id}
-                                    className={
-                                        m.sender_id === uid ? 'ion-text-right' : 'ion-text-left'
-                                    }
+                                    className={m.sender_id === uid ? 'ion-text-right' : 'ion-text-left'}
                                 >
-                                    <IonLabel>
-                                        <p>{m.content}</p>
+                                    <IonLabel className="ion-padding-vertical">
+                                        {/* Affichage image ou texte */}
+                                        {m.image_url && (
+                                            <img
+                                                src={m.image_url}
+                                                alt="sent"
+                                                style={{ maxWidth: '60%', borderRadius: 8 }}
+                                            />
+                                        )}
+                                        {m.content && <p>{m.content}</p>}
                                         <small>
                                             {new Date(m.created_at).toLocaleTimeString([], {
                                                 hour: '2-digit',
@@ -124,18 +159,26 @@ const Chat: React.FC<RouteComponentProps<MatchParams>> = ({ match }) => {
                 )}
             </IonContent>
 
-            {/* zone de saisie fixe en bas */}
+            {/* Barre de composition */}
             <IonItem lines="none">
+                {/* Bouton caméra */}
+                <IonButton slot="start" fill="clear" onClick={handleCapturePhoto}>
+                    <IonIcon icon={cameraOutline} />
+                </IonButton>
+
+                {/* Saisie texte */}
                 <IonInput
                     value={text}
-                    onIonChange={e => setText(e.detail.value ?? '')}
+                    onIonChange={(e) => setText(e.detail.value ?? '')}
                     placeholder="Type a message…"
-                    onKeyDown={e => {
-                        if (e.key === 'Enter') handleSend();
+                    onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleSendText();
                     }}
                 />
-                <IonButton slot="end" onClick={handleSend}>
-                    Send
+
+                {/* Envoi texte */}
+                <IonButton slot="end" onClick={handleSendText}>
+                    <IonIcon icon={sendOutline} />
                 </IonButton>
             </IonItem>
 
