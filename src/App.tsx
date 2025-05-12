@@ -6,6 +6,7 @@ import Login from './pages/Login';
 import Profile from './pages/Profile';
 import FindFriends from './pages/FindFriends';
 import Contacts from './pages/Contacts';
+import Chat from './pages/Chat';
 import { AuthProvider } from './contexts/AuthContext';
 import PrivateRoute from './components/PrivateRoute';
 
@@ -40,6 +41,7 @@ const App: React.FC = () => (
           <PrivateRoute exact path="/profile" component={Profile} />
           <PrivateRoute exact path="/friends" component={FindFriends} />
           <PrivateRoute exact path="/contacts" component={Contacts} />
+          <PrivateRoute exact path="/chat/:id" component={Chat} />
           <Route exact path="/">
             <Redirect to="/home" />
           </Route>
