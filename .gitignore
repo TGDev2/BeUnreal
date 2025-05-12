@@ -29,3 +29,11 @@ yarn-error.log*
 
 # Optional eslint cache
 .eslintcache
+
+# Node / Ionic
+build/
+dist/
+android/
+ios/
+.DS_Store
+.vscode/
