@@ -39,3 +39,4 @@ ios/
 .DS_Store
 .vscode/
 package-lock.json
+supabase/.temp/

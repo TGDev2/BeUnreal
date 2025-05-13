@@ -14,21 +14,25 @@ import {
     IonTitle,
     IonToast,
     IonToolbar,
+    IonAlert,
 } from '@ionic/react';
-import { logOutOutline, personCircleOutline } from 'ionicons/icons';
+import { logOutOutline, personCircleOutline, trashBinOutline } from 'ionicons/icons';
+
 import { useAuth } from '../contexts/AuthContext';
-import { getProfile, upsertProfile, UserProfile } from '../services/userService';
+import { getProfile, upsertProfile, deleteAccount, UserProfile } from '../services/userService';
 
 const Profile: React.FC = () => {
     const { session, signOut } = useAuth();
     const uid = session?.user.id;
+
     const [loading, setLoading] = useState(true);
     const [profile, setProfile] = useState<UserProfile | null>(null);
     const [username, setUsername] = useState('');
     const [avatarUrl, setAvatarUrl] = useState('');
     const [toast, setToast] = useState<string>();
+    const [confirmOpen, setConfirmOpen] = useState(false);
 
-    /* Charge le profil à l’ouverture. */
+    /* — Chargement du profil — */
     useEffect(() => {
         const fetch = async () => {
             if (!uid) return;
@@ -46,12 +50,23 @@ const Profile: React.FC = () => {
         fetch();
     }, [uid]);
 
-    /* Sauvegarde les modifications. */
+    /* — Sauvegarde — */
     const save = async () => {
         if (!uid) return;
         try {
             await upsertProfile({ id: uid, username, avatar_url: avatarUrl });
             setToast('Profile updated');
+        } catch (e: any) {
+            setToast(e.message);
+        }
+    };
+
+    /* — Suppression de compte — */
+    const handleDelete = async () => {
+        if (!uid) return;
+        try {
+            await deleteAccount(uid);
+            await signOut();
         } catch (e: any) {
             setToast(e.message);
         }
@@ -119,6 +134,32 @@ const Profile: React.FC = () => {
                     <IonIcon icon={logOutOutline} slot="start" />
                     Sign&nbsp;Out
                 </IonButton>
+
+                <IonButton
+                    expand="block"
+                    fill="clear"
+                    color="danger"
+                    onClick={() => setConfirmOpen(true)}
+                >
+                    <IonIcon icon={trashBinOutline} slot="start" />
+                    Delete&nbsp;Account
+                </IonButton>
+
+                {/* — Confirmation irréversible — */}
+                <IonAlert
+                    isOpen={confirmOpen}
+                    header="Delete account"
+                    message="This action permanently deletes your account and all associated data. It cannot be undone."
+                    buttons={[
+                        { text: 'Cancel', role: 'cancel' },
+                        {
+                            text: 'Delete',
+                            role: 'destructive',
+                            handler: handleDelete,
+                        },
+                    ]}
+                    onDidDismiss={() => setConfirmOpen(false)}
+                />
 
                 <IonToast
                     isOpen={!!toast}

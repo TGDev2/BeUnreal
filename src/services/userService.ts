@@ -51,3 +51,14 @@ export const deleteProfile = async (userId: string): Promise<void> => {
 
     if (error) throw error;
 };
+
+/**
+ * Supprime le compte d'un utilisateur en appelant la fonction Edge.
+ * @param userId L'UUID de l'utilisateur à supprimer
+ */
+export const deleteAccount = async (userId: string): Promise<void> => {
+    const { error } = await supabase.functions.invoke('delete_user', {
+        body: { userId },
+    });
+    if (error) throw error;
+};
