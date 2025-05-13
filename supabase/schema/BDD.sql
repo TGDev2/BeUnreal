@@ -1,19 +1,22 @@
 -- ====================================================================
 -- BeUnreal – Supabase schema
--- Ajout de la table "contacts" + politiques RLS + diffusion en temps réel
+-- Tables + RLS + publication temps réel
 -- ====================================================================
 
--- Table profils (inchangée)
+-- -------------------------------------------------------
+-- Table "profiles"
+-- -------------------------------------------------------
 create table if not exists public.profiles (
-  id uuid primary key references auth.users on delete cascade,
-  username text,
-  avatar_url text,
-  created_at timestamptz default current_timestamp
+  id          uuid primary key references auth.users on delete cascade,
+  username    text,
+  avatar_url  text,
+  email       text generated always as (nullif((auth.jwt() ->> 'email')::text, '')) stored,
+  created_at  timestamptz default current_timestamp
 );
 
--- --------------------------------------------------------------------
--- Contacts (relations utilisateur → contact)
--- --------------------------------------------------------------------
+-- -------------------------------------------------------
+-- Contacts
+-- -------------------------------------------------------
 create table if not exists public.contacts (
   user_id     uuid references auth.users(id) on delete cascade,
   contact_id  uuid references auth.users(id) on delete cascade,
@@ -21,24 +24,22 @@ create table if not exists public.contacts (
   primary key (user_id, contact_id)
 );
 
--- Index pour accélérer les requêtes « mes contacts »
 create index if not exists contacts_user_idx    on public.contacts (user_id);
 create index if not exists contacts_contact_idx on public.contacts (contact_id);
 
--- Sécurité : RLS – chaque utilisateur ne gère que SA liste
 alter table public.contacts enable row level security;
 
-create policy "Users can manage their own contacts"
+create policy "Users manage their own contacts"
   on public.contacts
-  for all                            -- SELECT, INSERT, UPDATE, DELETE
-  using (auth.uid() = user_id)       -- lecture
-  with check (auth.uid() = user_id); -- écriture
+  for all
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
 
--- Temps-réel Supabase pour les mises à jour éventuelles
 alter publication supabase_realtime add table public.contacts;
 
--- --------------------------------------------------------------------
--- Table messages
+-- -------------------------------------------------------
+-- Messages privés
+-- -------------------------------------------------------
 create table if not exists public.messages (
   id            uuid primary key default gen_random_uuid(),
   sender_id     uuid references auth.users not null,
@@ -50,14 +51,49 @@ create table if not exists public.messages (
 create index if not exists messages_participants_idx
   on public.messages (sender_id, recipient_id, created_at desc);
 
--- --------------------------------------------------------------------
--- Groups, group_members, group_messages
+alter table public.messages enable row level security;
+
+-- Lire : seul un participant peut lire
+create policy "Participants can read conversation"
+  on public.messages
+  for select
+  using (auth.uid() = sender_id or auth.uid() = recipient_id);
+
+-- Écrire : seul l’expéditeur authentifié peut insérer
+create policy "Sender can write message"
+  on public.messages
+  for insert
+  with check (auth.uid() = sender_id);
+
+alter publication supabase_realtime add table public.messages;
+
+-- -------------------------------------------------------
+-- Groupes, membres, messages de groupe
+-- -------------------------------------------------------
 create table if not exists public.groups (
   id          uuid primary key default uuid_generate_v4(),
   name        text not null,
   created_at  timestamptz default now()
 );
 
+alter table public.groups enable row level security;
+
+-- Lecture : un utilisateur voit les groupes où il est membre
+create policy "Members can see their groups"
+  on public.groups
+  for select
+  using (exists (
+    select 1 from public.group_members gm
+    where gm.group_id = id and gm.user_id = auth.uid()
+  ));
+
+-- Création : tout utilisateur peut créer un groupe
+create policy "Anyone can create a group"
+  on public.groups
+  for insert
+  with check (true);
+
+-- -------------------------------------------------------
 create table if not exists public.group_members (
   group_id    uuid references public.groups(id) on delete cascade,
   user_id     uuid references auth.users(id) on delete cascade,
@@ -66,6 +102,27 @@ create table if not exists public.group_members (
   primary key (group_id, user_id)
 );
 
+alter table public.group_members enable row level security;
+
+-- Lire : chaque membre peut voir la liste des membres de ses groupes
+create policy "Members can read membership"
+  on public.group_members
+  for select
+  using (auth.uid() = user_id
+         or exists (select 1 from public.group_members gm
+                    where gm.group_id = group_id
+                      and gm.user_id = auth.uid()));
+
+-- Insérer / upsert : seuls les membres déjà présents (owner ou member) peuvent ajouter d’autres membres
+create policy "Existing members can add members"
+  on public.group_members
+  for insert
+  with check (exists (
+    select 1 from public.group_members gm
+    where gm.group_id = group_id and gm.user_id = auth.uid()
+  ));
+
+-- -------------------------------------------------------
 create table if not exists public.group_messages (
   id          uuid primary key default uuid_generate_v4(),
   group_id    uuid references public.groups(id) on delete cascade,
@@ -74,10 +131,35 @@ create table if not exists public.group_messages (
   image_url   text,
   created_at  timestamptz default now()
 );
+
+alter table public.group_messages enable row level security;
+
+-- Lire : seul un membre du groupe peut lire
+create policy "Group members can read messages"
+  on public.group_messages
+  for select
+  using (exists (
+    select 1 from public.group_members gm
+    where gm.group_id = group_id and gm.user_id = auth.uid()
+  ));
+
+-- Écrire : seul un membre peut poster et doit être l’expéditeur
+create policy "Group members can post"
+  on public.group_messages
+  for insert
+  with check (
+    auth.uid() = sender_id and
+    exists (
+      select 1 from public.group_members gm
+      where gm.group_id = group_id and gm.user_id = auth.uid()
+    )
+  );
+
 alter publication supabase_realtime add table public.group_messages;
 
--- --------------------------------------------------------------------
--- Stories géolocalisées
+-- -------------------------------------------------------
+-- Stories géolocalisées (lecture publique)
+-- -------------------------------------------------------
 create table if not exists public.stories (
   id          uuid primary key default uuid_generate_v4(),
   user_id     uuid references auth.users(id) on delete cascade,
@@ -87,4 +169,19 @@ create table if not exists public.stories (
   longitude   double precision not null,
   created_at  timestamptz default now()
 );
+
+alter table public.stories enable row level security;
+
+-- Tout le monde (auth ou non) peut lire les stories
+create policy "Anonymous read stories"
+  on public.stories
+  for select
+  using (true);
+
+-- Seul l’utilisateur connecté peut créer SA story
+create policy "User can post story"
+  on public.stories
+  for insert
+  with check (auth.uid() = user_id);
+
 alter publication supabase_realtime add table public.stories;
