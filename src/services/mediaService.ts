@@ -12,15 +12,16 @@ const uploadFile = async (
     const ext = (file instanceof File && file.name.split('.').pop()) || 'bin';
     const filename = randomName(pathPrefix, ext);
 
-    const { error } = await supabase
-        .storage
+    const { error } = await supabase.storage
         .from(bucket)
-        .upload(filename, file, { contentType: (file as any).type || 'application/octet-stream' });
+        .upload(filename, file, {
+            contentType: (file as any).type || 'application/octet-stream',
+        });
 
     if (error) throw error;
 
     const { data } = supabase.storage.from(bucket).getPublicUrl(filename);
-    if (!data?.publicUrl) throw new Error('Unable to retrieve public URL after upload.');
+    if (!data?.publicUrl) throw new Error('Unable to retrieve public URL after upload');
 
     return data.publicUrl;
 };
@@ -54,3 +55,7 @@ export const uploadStoryImage = async (dataUrl: string): Promise<string> => {
 
     return uploadFile('story-media', 'stories', new File([blob], `tmp.${ext}`, { type: mime }));
 };
+
+/* ---------- Upload vidéo de story ------------- */
+export const uploadStoryVideo = async (file: File): Promise<string> =>
+    uploadFile('story-media', 'stories/videos', file);
