@@ -29,8 +29,9 @@ import { uploadChatImage, uploadChatVideo } from '../services/mediaService';
 
 const Chat: React.FC = () => {
     const { id } = useParams<{ id: string }>();
-    if (!id) return null; // ou un spinner personnalisé
+    if (!id) return null;
     const contactId = id;
+
     const { session } = useAuth();
     const uid = session!.user.id;
 
@@ -40,8 +41,9 @@ const Chat: React.FC = () => {
     const [busy, setBusy] = useState(true);
     const [toast, setToast] = useState<string>();
     const bottomRef = useRef<HTMLDivElement | null>(null);
+    const videoInputRef = useRef<HTMLInputElement | null>(null);
 
-    /* Charge profil + historique */
+    /* ---------- Initial load ---------- */
     useEffect(() => {
         const load = async () => {
             try {
@@ -60,36 +62,28 @@ const Chat: React.FC = () => {
         load();
     }, [uid, contactId]);
 
-    /* Abonnement temps réel */
-    useEffect(() => {
-        const unsubscribe = subscribeToConversation(uid, contactId, (msg) =>
-            setMessages((prev) => [...prev, msg]),
-        );
-        return unsubscribe;
-    }, [uid, contactId]);
+    /* ---------- Realtime ---------- */
+    useEffect(
+        () => subscribeToConversation(uid, contactId, (msg) => setMessages((p) => [...p, msg])),
+        [uid, contactId],
+    );
 
-    /* Scroll auto vers le bas */
-    useEffect(() => {
-        bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, [messages]);
+    /* ---------- Auto-scroll ---------- */
+    useEffect(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), [messages]);
 
-    /** Envoi d'un texte */
+    /* ---------- Send text ---------- */
     const handleSendText = async () => {
         const trimmed = text.trim();
         if (!trimmed) return;
         setText('');
         try {
-            await sendMessage({
-                senderId: uid,
-                recipientId: contactId,
-                content: trimmed,
-            });
+            await sendMessage({ senderId: uid, recipientId: contactId, content: trimmed });
         } catch (e: any) {
             setToast(e.message);
         }
     };
 
-    /** Capture d'une photo, upload, puis envoi */
+    /* ---------- Send photo ---------- */
     const handleCapturePhoto = async () => {
         try {
             const photo = await Camera.getPhoto({
@@ -101,21 +95,14 @@ const Chat: React.FC = () => {
             if (!photo.dataUrl) return;
             const publicUrl = await uploadChatImage(photo.dataUrl);
 
-            await sendMessage({
-                senderId: uid,
-                recipientId: contactId,
-                imageUrl: publicUrl,
-            });
+            await sendMessage({ senderId: uid, recipientId: contactId, imageUrl: publicUrl });
         } catch (e: any) {
-            // Annulation silencieuse si l’utilisateur ferme la caméra sans prendre de photo
             if (e?.message?.includes('User cancelled')) return;
             setToast(e.message);
         }
     };
 
-    /* -------------------------- vidéo --------------------------------- */
-    const videoInputRef = useRef<HTMLInputElement | null>(null);
-
+    /* ---------- Send video (≤ 10 s) ---------- */
     const isVideoWithinLimit = (file: File, maxSec = 10): Promise<boolean> =>
         new Promise((resolve) => {
             const url = URL.createObjectURL(file);
@@ -134,20 +121,17 @@ const Chat: React.FC = () => {
 
         if (!(await isVideoWithinLimit(file))) {
             setToast('Video must be 10 seconds or shorter.');
+            e.target.value = '';
             return;
         }
 
         try {
             const publicUrl = await uploadChatVideo(file);
-            await sendMessage({
-                senderId: uid,
-                recipientId: contactId,
-                imageUrl: publicUrl, // on réutilise le champ existant
-            });
+            await sendMessage({ senderId: uid, recipientId: contactId, imageUrl: publicUrl });
         } catch (err: any) {
             setToast(err.message);
         } finally {
-            e.target.value = ''; // reset pour pouvoir re-sélectionner le même fichier
+            e.target.value = '';
         }
     };
 
@@ -171,14 +155,19 @@ const Chat: React.FC = () => {
                                     className={m.sender_id === uid ? 'ion-text-right' : 'ion-text-left'}
                                 >
                                     <IonLabel className="ion-padding-vertical">
-                                        {/* Affichage image ou texte */}
-                                        {m.image_url && (
+                                        {m.image_url && m.image_url.match(/\.(mp4|webm|ogg)$/i) ? (
+                                            <video
+                                                src={m.image_url}
+                                                controls
+                                                style={{ maxWidth: '60%', borderRadius: 8 }}
+                                            />
+                                        ) : m.image_url ? (
                                             <img
                                                 src={m.image_url}
                                                 alt="sent"
                                                 style={{ maxWidth: '60%', borderRadius: 8 }}
                                             />
-                                        )}
+                                        ) : null}
                                         {m.content && <p>{m.content}</p>}
                                         <small>
                                             {new Date(m.created_at).toLocaleTimeString([], {
@@ -189,25 +178,20 @@ const Chat: React.FC = () => {
                                     </IonLabel>
                                 </IonItem>
                             ))}
+                            {/* ancre pour auto-scroll */}
+                            <div ref={bottomRef} />
                         </IonList>
-                        <div ref={bottomRef} />
                     </>
                 )}
             </IonContent>
 
-            {/* Barre de composition */}
+            {/* ------- Composer bar (outside scroll area) ------- */}
             <IonItem lines="none">
-                {/* Caméra photo */}
                 <IonButton slot="start" fill="clear" onClick={handleCapturePhoto}>
                     <IonIcon icon={cameraOutline} />
                 </IonButton>
 
-                {/* Caméra vidéo */}
-                <IonButton
-                    slot="start"
-                    fill="clear"
-                    onClick={() => videoInputRef.current?.click()}
-                >
+                <IonButton slot="start" fill="clear" onClick={() => videoInputRef.current?.click()}>
                     <IonIcon icon={videocamOutline} />
                 </IonButton>
                 <input
@@ -219,7 +203,6 @@ const Chat: React.FC = () => {
                     onChange={handleVideoSelected}
                 />
 
-                {/* Saisie texte */}
                 <IonInput
                     value={text}
                     onIonChange={(e) => setText(e.detail.value ?? '')}
@@ -227,41 +210,10 @@ const Chat: React.FC = () => {
                     onKeyDown={(e) => e.key === 'Enter' && handleSendText()}
                 />
 
-                {/* Envoi texte */}
                 <IonButton slot="end" onClick={handleSendText}>
                     <IonIcon icon={sendOutline} />
                 </IonButton>
             </IonItem>
-
-            {/* Liste des messages */}
-            <IonList lines="none">
-                {messages.map((m) => (
-                    <IonItem key={m.id} className={m.sender_id === uid ? 'ion-text-right' : 'ion-text-left'}>
-                        <IonLabel className="ion-padding-vertical">
-                            {m.image_url && m.image_url.match(/\.(mp4|webm|ogg)$/i) ? (
-                                <video
-                                    src={m.image_url}
-                                    controls
-                                    style={{ maxWidth: '60%', borderRadius: 8 }}
-                                />
-                            ) : m.image_url ? (
-                                <img
-                                    src={m.image_url}
-                                    alt="sent"
-                                    style={{ maxWidth: '60%', borderRadius: 8 }}
-                                />
-                            ) : null}
-                            {m.content && <p>{m.content}</p>}
-                            <small>
-                                {new Date(m.created_at).toLocaleTimeString([], {
-                                    hour: '2-digit',
-                                    minute: '2-digit',
-                                })}
-                            </small>
-                        </IonLabel>
-                    </IonItem>
-                ))}
-            </IonList>
 
             <IonToast
                 isOpen={!!toast}

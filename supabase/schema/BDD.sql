@@ -10,7 +10,7 @@ create table if not exists public.profiles (
   id          uuid primary key references auth.users on delete cascade,
   username    text,
   avatar_url  text,
-  email       text generated always as (nullif((auth.jwt() ->> 'email')::text, '')) stored,
+  email       text,
   created_at  timestamptz default current_timestamp
 );
 
