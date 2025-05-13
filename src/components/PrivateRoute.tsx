@@ -1,23 +1,18 @@
-import { Redirect, Route, RouteProps } from 'react-router-dom';
+import { ReactNode } from 'react';
+import { Navigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
-interface PrivateRouteProps extends RouteProps {
-    component: React.ComponentType<any>;
+interface PrivateRouteProps {
+    children: ReactNode;
 }
 
-const PrivateRoute: React.FC<PrivateRouteProps> = ({ component: Component, ...rest }) => {
+const PrivateRoute: React.FC<PrivateRouteProps> = ({ children }) => {
     const { session, loading } = useAuth();
 
-    if (loading) return null; // Optional: add spinner
-
-    return (
-        <Route
-            {...rest}
-            render={(props) =>
-                session ? <Component {...props} /> : <Redirect to="/login" />
-            }
-        />
-    );
+    if (loading) {
+        return null;
+    }
+    return session ? <>{children}</> : <Navigate to="/login" replace />;
 };
 
 export default PrivateRoute;

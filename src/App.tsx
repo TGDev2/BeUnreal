@@ -1,6 +1,9 @@
-import { Redirect, Route } from 'react-router-dom';
 import { IonApp, IonRouterOutlet, setupIonicReact } from '@ionic/react';
 import { IonReactRouter } from '@ionic/react-router';
+import { Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider } from './contexts/AuthContext';
+import PrivateRoute from './components/PrivateRoute';
+
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Profile from './pages/Profile';
@@ -10,26 +13,18 @@ import Chat from './pages/Chat';
 import Groups from './pages/Groups';
 import GroupChat from './pages/GroupChat';
 import Stories from './pages/Stories';
-import { AuthProvider } from './contexts/AuthContext';
-import PrivateRoute from './components/PrivateRoute';
 
-/* Ionic core styles */
 import '@ionic/react/css/core.css';
 import '@ionic/react/css/normalize.css';
 import '@ionic/react/css/structure.css';
 import '@ionic/react/css/typography.css';
-
-/* Optional utilities */
 import '@ionic/react/css/padding.css';
 import '@ionic/react/css/float-elements.css';
 import '@ionic/react/css/text-alignment.css';
 import '@ionic/react/css/text-transformation.css';
 import '@ionic/react/css/flex-utils.css';
 import '@ionic/react/css/display.css';
-
 import '@ionic/react/css/palettes/dark.system.css';
-
-/* Theme variables */
 import './theme/variables.css';
 
 setupIonicReact();
@@ -39,18 +34,79 @@ const App: React.FC = () => (
     <AuthProvider>
       <IonReactRouter>
         <IonRouterOutlet>
-          <Route exact path="/login" component={Login} />
-          <PrivateRoute exact path="/home" component={Home} />
-          <PrivateRoute exact path="/profile" component={Profile} />
-          <PrivateRoute exact path="/friends" component={FindFriends} />
-          <PrivateRoute exact path="/contacts" component={Contacts} />
-          <PrivateRoute exact path="/chat/:id" component={Chat} />
-          <PrivateRoute exact path="/groups" component={Groups} />
-          <PrivateRoute exact path="/group/:id" component={GroupChat} />
-          <PrivateRoute exact path="/stories" component={Stories} />
-          <Route exact path="/">
-            <Redirect to="/home" />
-          </Route>
+          <Routes>
+            {/* Route publique */}
+            <Route path="/login" element={<Login />} />
+
+            {/* Routes protégées */}
+            <Route
+              path="/home"
+              element={
+                <PrivateRoute>
+                  <Home />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/profile"
+              element={
+                <PrivateRoute>
+                  <Profile />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/friends"
+              element={
+                <PrivateRoute>
+                  <FindFriends />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/contacts"
+              element={
+                <PrivateRoute>
+                  <Contacts />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/chat/:id"
+              element={
+                <PrivateRoute>
+                  <Chat />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/groups"
+              element={
+                <PrivateRoute>
+                  <Groups />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/group/:id"
+              element={
+                <PrivateRoute>
+                  <GroupChat />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/stories"
+              element={
+                <PrivateRoute>
+                  <Stories />
+                </PrivateRoute>
+              }
+            />
+
+            {/* Redirection par défaut */}
+            <Route path="/" element={<Navigate to="/home" replace />} />
+          </Routes>
         </IonRouterOutlet>
       </IonReactRouter>
     </AuthProvider>

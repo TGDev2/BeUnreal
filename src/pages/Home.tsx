@@ -1,16 +1,9 @@
-import {
-  IonContent,
-  IonHeader,
-  IonPage,
-  IonTitle,
-  IonToolbar,
-  IonButton,
-} from '@ionic/react';
-import { useHistory } from 'react-router';
+import { IonButton, IonContent, IonHeader, IonPage, IonTitle, IonToolbar } from '@ionic/react';
+import { useNavigate } from 'react-router-dom';
 import './Home.css';
 
 const Home: React.FC = () => {
-  const history = useHistory();
+  const navigate = useNavigate();
 
   return (
     <IonPage>
@@ -21,19 +14,19 @@ const Home: React.FC = () => {
       </IonHeader>
 
       <IonContent className="ion-padding">
-        <IonButton expand="block" onClick={() => history.push('/profile')}>
+        <IonButton expand="block" onClick={() => navigate('/profile')}>
           My Profile
         </IonButton>
-        <IonButton expand="block" fill="outline" onClick={() => history.push('/friends')}>
+        <IonButton expand="block" fill="outline" onClick={() => navigate('/friends')}>
           Find friends
         </IonButton>
-        <IonButton expand="block" fill="clear" onClick={() => history.push('/contacts')}>
+        <IonButton expand="block" fill="clear" onClick={() => navigate('/contacts')}>
           My contacts
         </IonButton>
-        <IonButton expand="block" fill="solid" color="tertiary" onClick={() => history.push('/groups')}>
+        <IonButton expand="block" fill="solid" color="tertiary" onClick={() => navigate('/groups')}>
           Groups
         </IonButton>
-        <IonButton expand="block" fill="solid" color="success" onClick={() => history.push('/stories')}>
+        <IonButton expand="block" fill="solid" color="success" onClick={() => navigate('/stories')}>
           Nearby Stories
         </IonButton>
       </IonContent>

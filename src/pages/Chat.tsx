@@ -8,14 +8,14 @@ import {
     IonLabel,
     IonList,
     IonPage,
+    IonSpinner,
     IonTitle,
     IonToolbar,
-    IonSpinner,
     IonToast,
 } from '@ionic/react';
 import { cameraOutline, sendOutline, videocamOutline } from 'ionicons/icons';
 import { useEffect, useRef, useState } from 'react';
-import { RouteComponentProps } from 'react-router';
+import { useParams } from 'react-router-dom';
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { useAuth } from '../contexts/AuthContext';
 import {
@@ -27,12 +27,10 @@ import {
 import { getProfile, UserProfile } from '../services/userService';
 import { uploadChatImage, uploadChatVideo } from '../services/mediaService';
 
-interface MatchParams {
-    id: string; // contactId
-}
-
-const Chat: React.FC<RouteComponentProps<MatchParams>> = ({ match }) => {
-    const contactId = match.params.id;
+const Chat: React.FC = () => {
+    const { id } = useParams<{ id: string }>();
+    if (!id) return null; // ou un spinner personnalisé
+    const contactId = id;
     const { session } = useAuth();
     const uid = session!.user.id;
 

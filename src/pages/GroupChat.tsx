@@ -1,3 +1,5 @@
+import { useEffect, useRef, useState } from 'react';
+import { useParams } from 'react-router-dom';
 import {
     IonButton,
     IonContent,
@@ -14,8 +16,6 @@ import {
     IonToolbar,
 } from '@ionic/react';
 import { cameraOutline, sendOutline } from 'ionicons/icons';
-import { useEffect, useRef, useState } from 'react';
-import { RouteComponentProps } from 'react-router';
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { useAuth } from '../contexts/AuthContext';
 import {
@@ -27,12 +27,10 @@ import {
 import { getGroup } from '../services/groupService';
 import { uploadChatImage } from '../services/mediaService';
 
-interface MatchParams {
-    id: string; // groupId
-}
-
-const GroupChat: React.FC<RouteComponentProps<MatchParams>> = ({ match }) => {
-    const groupId = match.params.id;
+const GroupChat: React.FC = () => {
+    const { id } = useParams<{ id: string }>();
+    if (!id) return null;
+    const groupId = id;
     const { session } = useAuth();
     const uid = session!.user.id;
 
