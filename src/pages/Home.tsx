@@ -30,6 +30,9 @@ const Home: React.FC = () => {
         <IonButton expand="block" fill="clear" onClick={() => history.push('/contacts')}>
           My contacts
         </IonButton>
+        <IonButton expand="block" fill="solid" color="tertiary" onClick={() => history.push('/groups')}>
+          Groups
+        </IonButton>
       </IonContent>
     </IonPage>
   );

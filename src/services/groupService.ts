@@ -18,15 +18,23 @@ export interface GroupMember {
 const GROUPS_TABLE = 'groups';
 const MEMBERS_TABLE = 'group_members';
 
+/* -------- Lecture d’un groupe par id ------------------------ */
+export const getGroup = async (groupId: string): Promise<Group | null> => {
+    const { data, error } = await supabase
+        .from(GROUPS_TABLE)
+        .select('*')
+        .eq('id', groupId)
+        .single();
+
+    if (error) throw error;
+    return data as Group;
+};
+
 /**
  * Crée un nouveau groupe et ajoute immédiatement le créateur avec le rôle owner.
  * @returns Le groupe créé.
  */
-export const createGroup = async (
-    name: string,
-    ownerId: string
-): Promise<Group> => {
-    // 1) Insertion du groupe
+export const createGroup = async (name: string, ownerId: string): Promise<Group> => {
     const { data, error } = await supabase
         .from(GROUPS_TABLE)
         .insert({ name })
@@ -36,45 +44,22 @@ export const createGroup = async (
     if (error) throw error;
     const group = data as Group;
 
-    // 2) Ajout du créateur dans les membres (role owner)
     const { error: memberErr } = await supabase
         .from(MEMBERS_TABLE)
-        .insert({
-            group_id: group.id,
-            user_id: ownerId,
-            role: 'owner',
-        });
+        .insert({ group_id: group.id, user_id: ownerId, role: 'owner' });
 
-    // on continue si doublon (code 23505) sinon on remonte l’erreur
     if (memberErr && memberErr.code !== '23505') throw memberErr;
-
     return group;
 };
 
-/**
- * Ajoute plusieurs utilisateurs à un groupe (doublons fusionnés via upsert).
- */
-export const addMembers = async (
-    groupId: string,
-    userIds: string[]
-): Promise<void> => {
-    const rows = userIds.map((userId) => ({
-        group_id: groupId,
-        user_id: userId,
-        role: 'member' as const,
-    }));
-
-    // upsert avec onConflict en string pour ignorer les doublons
-    const { error } = await supabase
-        .from(MEMBERS_TABLE)
-        .upsert(rows, { onConflict: 'group_id,user_id' });
-
+/** Ajoute plusieurs utilisateurs (upsert) */
+export const addMembers = async (groupId: string, userIds: string[]): Promise<void> => {
+    const rows = userIds.map((id) => ({ group_id: groupId, user_id: id, role: 'member' as const }));
+    const { error } = await supabase.from(MEMBERS_TABLE).upsert(rows, { onConflict: 'group_id,user_id' });
     if (error) throw error;
 };
 
-/**
- * Récupère tous les groupes auxquels appartient un utilisateur.
- */
+/** Liste des groupes d’un utilisateur */
 export const getUserGroups = async (userId: string): Promise<Group[]> => {
     const { data, error } = await supabase
         .from(MEMBERS_TABLE)
@@ -82,5 +67,5 @@ export const getUserGroups = async (userId: string): Promise<Group[]> => {
         .eq('user_id', userId);
 
     if (error) throw error;
-    return (data ?? []).map((row: any) => row.groups as Group);
+    return (data ?? []).map((r: any) => r.groups as Group);
 };
