@@ -1,5 +1,6 @@
 import { supabase } from './supabaseClient';
 
+/** Représentation d’un message privé. */
 export interface Message {
     id: string;
     sender_id: string;
@@ -11,7 +12,9 @@ export interface Message {
 
 const TABLE = 'messages';
 
-/** Récupère l’historique dans l’ordre chronologique ascendant. */
+/* -------------------------------------------------- */
+/* Lecture historique                                 */
+/* -------------------------------------------------- */
 export const fetchConversation = async (
     uid: string,
     contactId: string,
@@ -25,11 +28,14 @@ export const fetchConversation = async (
         )
         .order('created_at', { ascending: true })
         .limit(limit);
+
     if (error) throw error;
     return data as Message[];
 };
 
-/** Envoie un message texte (image_url facultatif). */
+/* -------------------------------------------------- */
+/* Envoi d’un message                                 */
+/* -------------------------------------------------- */
 export const sendMessage = async (opts: {
     senderId: string;
     recipientId: string;
@@ -42,33 +48,50 @@ export const sendMessage = async (opts: {
         content: opts.content ?? null,
         image_url: opts.imageUrl ?? null,
     });
+
     if (error) throw error;
 };
 
-/**
- * S’abonne en temps réel à la conversation.  
- * Retourne la fonction de désabonnement.
- */
+/* -------------------------------------------------- */
+/* Souscription temps-réel à UNE conversation         */
+/* -------------------------------------------------- */
 export const subscribeToConversation = (
     uid: string,
     contactId: string,
     onNew: (msg: Message) => void,
 ) => {
-    const channel = supabase
-        .channel(`chat:${uid}:${contactId}`)
-        .on(
-            'postgres_changes',
-            {
-                event: 'INSERT',
-                schema: 'public',
-                table: TABLE,
-                filter: `recipient_id=in.(${uid},${contactId})`,
-            },
-            payload => {
-                onNew(payload.new as Message);
-            },
-        )
-        .subscribe();
+    /** Nom symétrique et stable pour la chaîne : évite les doublons. */
+    const channelName = `chat:${[uid, contactId].sort().join(':')}`;
+    const channel = supabase.channel(channelName);
 
-    return () => void supabase.removeChannel(channel);
+    /* Messages envoyés par l’utilisateur AU contact */
+    channel.on(
+        'postgres_changes',
+        {
+            event: 'INSERT',
+            schema: 'public',
+            table: TABLE,
+            filter: `sender_id=eq.${uid},recipient_id=eq.${contactId}`,
+        },
+        (payload) => onNew(payload.new as Message),
+    );
+
+    /* Messages envoyés PAR le contact à l’utilisateur */
+    channel.on(
+        'postgres_changes',
+        {
+            event: 'INSERT',
+            schema: 'public',
+            table: TABLE,
+            filter: `sender_id=eq.${contactId},recipient_id=eq.${uid}`,
+        },
+        (payload) => onNew(payload.new as Message),
+    );
+
+    channel.subscribe();
+
+    /** Fonction de désabonnement propre : supprime la chaîne côté client. */
+    return () => {
+        supabase.removeChannel(channel);
+    };
 };
