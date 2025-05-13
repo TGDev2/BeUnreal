@@ -41,3 +41,26 @@ export const uploadChatImage = async (dataUrl: string): Promise<string> => {
 
     return data.publicUrl;
 };
+
+/**
+ * Upload d’une image de story, renvoie l’URL publique.
+ */
+export const uploadStoryImage = async (dataUrl: string): Promise<string> => {
+    const { blob, mime, ext } = dataUrlToBlob(dataUrl);
+
+    const filename = `stories/${Date.now()}-${crypto
+        .randomUUID()
+        .replace(/-/g, '')
+        .slice(0, 12)}.${ext}`;
+
+    const { error } = await supabase.storage
+        .from('story-media')
+        .upload(filename, blob, { contentType: mime });
+
+    if (error) throw error;
+
+    const { data } = supabase.storage.from('story-media').getPublicUrl(filename);
+    if (!data?.publicUrl) throw new Error('Unable to retrieve public URL after upload.');
+
+    return data.publicUrl;
+};

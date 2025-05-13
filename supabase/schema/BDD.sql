@@ -51,3 +51,16 @@ create table if not exists public.group_messages (
 
 -- Temps-réel Supabase -----------------------------------------------
 alter publication supabase_realtime add table public.group_messages;
+
+-- Stories (géolocalisées) -----------------------------------------------
+create table if not exists public.stories (
+  id          uuid primary key default uuid_generate_v4(),
+  user_id     uuid references auth.users(id) on delete cascade,
+  media_url   text not null,
+  media_type  text not null default 'image', -- 'image' | 'video'
+  latitude    double precision not null,
+  longitude   double precision not null,
+  created_at  timestamptz       default now()
+);
+
+alter publication supabase_realtime add table public.stories;

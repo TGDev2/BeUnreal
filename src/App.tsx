@@ -9,6 +9,7 @@ import Contacts from './pages/Contacts';
 import Chat from './pages/Chat';
 import Groups from './pages/Groups';
 import GroupChat from './pages/GroupChat';
+import Stories from './pages/Stories';
 import { AuthProvider } from './contexts/AuthContext';
 import PrivateRoute from './components/PrivateRoute';
 
@@ -46,6 +47,7 @@ const App: React.FC = () => (
           <PrivateRoute exact path="/chat/:id" component={Chat} />
           <PrivateRoute exact path="/groups" component={Groups} />
           <PrivateRoute exact path="/group/:id" component={GroupChat} />
+          <PrivateRoute exact path="/stories" component={Stories} />
           <Route exact path="/">
             <Redirect to="/home" />
           </Route>

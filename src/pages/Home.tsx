@@ -33,6 +33,9 @@ const Home: React.FC = () => {
         <IonButton expand="block" fill="solid" color="tertiary" onClick={() => history.push('/groups')}>
           Groups
         </IonButton>
+        <IonButton expand="block" fill="solid" color="success" onClick={() => history.push('/stories')}>
+          Nearby Stories
+        </IonButton>
       </IonContent>
     </IonPage>
   );
