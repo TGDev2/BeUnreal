@@ -1,66 +1,56 @@
 import { supabase } from './supabaseClient';
 
-/**
- * Construit un Blob depuis une DataURL (base64).
- */
-const dataUrlToBlob = (dataUrl: string): { blob: Blob; mime: string; ext: string } => {
+/* ---------- Utilitaires génériques ------------------------------------ */
+const randomName = (prefix: string, ext: string) =>
+    `${prefix}/${Date.now()}-${crypto.randomUUID().replace(/-/g, '').slice(0, 12)}.${ext}`;
+
+const uploadFile = async (
+    bucket: string,
+    pathPrefix: string,
+    file: Blob | File,
+): Promise<string> => {
+    const ext = (file instanceof File && file.name.split('.').pop()) || 'bin';
+    const filename = randomName(pathPrefix, ext);
+
+    const { error } = await supabase
+        .storage
+        .from(bucket)
+        .upload(filename, file, { contentType: (file as any).type || 'application/octet-stream' });
+
+    if (error) throw error;
+
+    const { data } = supabase.storage.from(bucket).getPublicUrl(filename);
+    if (!data?.publicUrl) throw new Error('Unable to retrieve public URL after upload.');
+
+    return data.publicUrl;
+};
+
+/* ---------- Upload image de chat --------------------------- */
+export const uploadChatImage = async (dataUrl: string): Promise<string> => {
     const [meta, base64] = dataUrl.split(',');
-    const mimeMatch = /data:(.*);base64/.exec(meta);
-    const mime = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+    const mime = /data:(.*);base64/.exec(meta)?.[1] ?? 'image/jpeg';
+    const bin = atob(base64);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    const blob = new Blob([bytes], { type: mime });
     const ext = mime.split('/')[1] ?? 'jpg';
 
-    const binary = atob(base64);
-    const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-
-    return { blob: new Blob([bytes], { type: mime }), mime, ext };
+    return uploadFile('chat-images', 'chat', new File([blob], `tmp.${ext}`, { type: mime }));
 };
 
-/**
- * Upload une image et retourne son URL publique.
- * @param dataUrl résultat `photo.dataUrl` du plugin Camera
- */
-export const uploadChatImage = async (dataUrl: string): Promise<string> => {
-    const { blob, mime, ext } = dataUrlToBlob(dataUrl);
+/* ---------- Upload vidéo de chat ---------------------------- */
+export const uploadChatVideo = async (file: File): Promise<string> =>
+    uploadFile('chat-media', 'chat/videos', file);
 
-    // Nom de fichier unique
-    const filename = `chat/${Date.now()}-${crypto
-        .randomUUID()
-        .replace(/-/g, '')
-        .slice(0, 12)}.${ext}`;
-
-    // Assurez-vous d’avoir créé le bucket “chat-images” (public) côté Supabase.
-    const { error } = await supabase.storage
-        .from('chat-images')
-        .upload(filename, blob, { contentType: mime });
-
-    if (error) throw error;
-
-    const { data } = supabase.storage.from('chat-images').getPublicUrl(filename);
-    if (!data?.publicUrl) throw new Error('Unable to retrieve public URL after upload.');
-
-    return data.publicUrl;
-};
-
-/**
- * Upload d’une image de story, renvoie l’URL publique.
- */
+/* ---------- Upload image de story ------------------------- */
 export const uploadStoryImage = async (dataUrl: string): Promise<string> => {
-    const { blob, mime, ext } = dataUrlToBlob(dataUrl);
+    const [meta, base64] = dataUrl.split(',');
+    const mime = /data:(.*);base64/.exec(meta)?.[1] ?? 'image/jpeg';
+    const bin = atob(base64);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    const blob = new Blob([bytes], { type: mime });
+    const ext = mime.split('/')[1] ?? 'jpg';
 
-    const filename = `stories/${Date.now()}-${crypto
-        .randomUUID()
-        .replace(/-/g, '')
-        .slice(0, 12)}.${ext}`;
-
-    const { error } = await supabase.storage
-        .from('story-media')
-        .upload(filename, blob, { contentType: mime });
-
-    if (error) throw error;
-
-    const { data } = supabase.storage.from('story-media').getPublicUrl(filename);
-    if (!data?.publicUrl) throw new Error('Unable to retrieve public URL after upload.');
-
-    return data.publicUrl;
+    return uploadFile('story-media', 'stories', new File([blob], `tmp.${ext}`, { type: mime }));
 };
