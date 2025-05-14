@@ -72,8 +72,10 @@ supabase storage create-bucket chat-images public
 supabase storage create-bucket chat-media  public
 supabase storage create-bucket story-media public
 
-# 4. Extensions géospatiales (Nearby Stories)
+# 4. Extensions indispensables (UUID + géo)
 supabase db remote execute "
+  create extension if not exists pgcrypto;
+  create extension if not exists uuid_ossp;
   create extension if not exists cube;
   create extension if not exists earthdistance;
 "

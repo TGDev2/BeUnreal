@@ -3,6 +3,10 @@
 -- Tables + RLS + publication temps réel
 -- ====================================================================
 
+-- ▸ Extensions indispensables ----------------------------------------
+create extension if not exists "pgcrypto";     -- gen_random_uuid()
+create extension if not exists "uuid-ossp";    -- uuid_generate_v4()
+
 -- -------------------------------------------------------
 -- Table "profiles"
 -- -------------------------------------------------------
@@ -124,7 +128,7 @@ create policy "Existing members can add members"
 
 -- -------------------------------------------------------
 create table if not exists public.group_messages (
-  id          uuid primary key default uuid_generate_v4(),
+  id          uuid primary key default gen_random_uuid(),
   group_id    uuid references public.groups(id) on delete cascade,
   sender_id   uuid references auth.users(id) on delete set null,
   content     text,
@@ -161,7 +165,7 @@ alter publication supabase_realtime add table public.group_messages;
 -- Stories géolocalisées (lecture publique)
 -- -------------------------------------------------------
 create table if not exists public.stories (
-  id          uuid primary key default uuid_generate_v4(),
+  id          uuid primary key default gen_random_uuid(),
   user_id     uuid references auth.users(id) on delete cascade,
   media_url   text not null,
   media_type  text not null default 'image', -- 'image' | 'video'
@@ -186,11 +190,10 @@ create policy "User can post story"
 
 alter publication supabase_realtime add table public.stories;
 
--- ▸ Extensions nécessaires
+-- ▸ Extensions géospatiales & index
 create extension if not exists cube;
 create extension if not exists earthdistance;
 
--- ▸ Index géospatial pour stories
 create index if not exists stories_location_earth_idx
   on public.stories
   using gist ( ll_to_earth(latitude, longitude) );
