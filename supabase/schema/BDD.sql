@@ -18,6 +18,39 @@ create table if not exists public.profiles (
   created_at  timestamptz default current_timestamp
 );
 
+------------------------------------------------------------------------
+-- Row-Level Security sur PROFILES
+------------------------------------------------------------------------
+alter table public.profiles enable row level security;
+
+-- Lecture : tout utilisateur authentifié peut lire les profils
+create policy "Authenticated can read profiles"
+  on public.profiles
+  for select
+  using ( auth.role() = 'authenticated' );
+
+-- Création : un utilisateur ne peut insérer qu’un profil correspondant
+--            à son propre id.
+create policy "User can create own profile"
+  on public.profiles
+  for insert
+  with check ( auth.uid() = id );
+
+-- Mise à jour : uniquement son propre profil
+create policy "User can update own profile"
+  on public.profiles
+  for update
+  using ( auth.uid() = id );
+
+-- Suppression : uniquement son propre profil
+create policy "User can delete own profile"
+  on public.profiles
+  for delete
+  using ( auth.uid() = id );
+
+-- Temps réel
+alter publication supabase_realtime add table public.profiles;
+
 -- -------------------------------------------------------
 -- Contacts
 -- -------------------------------------------------------
