@@ -62,11 +62,13 @@ const Chat: React.FC = () => {
         load();
     }, [uid, contactId]);
 
-    /* ---------- Realtime ---------- */
-    useEffect(
-        () => subscribeToConversation(uid, contactId, (msg) => setMessages((p) => [...p, msg])),
-        [uid, contactId],
-    );
+    /* ---------- Realtime (avec cleanup) ---------- */
+    useEffect(() => {
+        const unsubscribe = subscribeToConversation(uid, contactId, (msg) =>
+            setMessages((prev) => [...prev, msg]),
+        );
+        return () => unsubscribe();
+    }, [uid, contactId]);
 
     /* ---------- Auto-scroll ---------- */
     useEffect(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), [messages]);

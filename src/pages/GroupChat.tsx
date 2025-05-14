@@ -64,11 +64,13 @@ const GroupChat: React.FC = () => {
         load();
     }, [groupId]);
 
-    /* ---------- Abonnement temps-réel ---------- */
-    useEffect(
-        () => subscribeToGroupMessages(groupId, (msg) => setMessages((p) => [...p, msg])),
-        [groupId],
-    );
+    /* ---------- Abonnement temps-réel (avec cleanup) ---------- */
+    useEffect(() => {
+        const unsubscribe = subscribeToGroupMessages(groupId, (msg) =>
+            setMessages((prev) => [...prev, msg]),
+        );
+        return () => unsubscribe();
+    }, [groupId]);
 
     /* ---------- Scroll auto ---------- */
     useEffect(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), [messages]);
