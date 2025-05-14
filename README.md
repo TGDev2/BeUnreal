@@ -71,6 +71,12 @@ supabase functions deploy delete_user
 supabase storage create-bucket chat-images public
 supabase storage create-bucket chat-media  public
 supabase storage create-bucket story-media public
+
+# 4. Extensions géospatiales (Nearby Stories)
+supabase db remote execute "
+  create extension if not exists cube;
+  create extension if not exists earthdistance;
+"
 ```
 
 > ℹ️ Les politiques RLS sont inclues dans le script SQL.

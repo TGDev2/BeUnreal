@@ -185,3 +185,31 @@ create policy "User can post story"
   with check (auth.uid() = user_id);
 
 alter publication supabase_realtime add table public.stories;
+
+-- ▸ Extensions nécessaires
+create extension if not exists cube;
+create extension if not exists earthdistance;
+
+-- ▸ Index géospatial pour stories
+create index if not exists stories_location_earth_idx
+  on public.stories
+  using gist ( ll_to_earth(latitude, longitude) );
+
+-- ▸ Fonction RPC : stories dans un rayon donné
+create or replace function public.nearby_stories(
+    p_lat         double precision,
+    p_lon         double precision,
+    p_radius_km   double precision default 10
+)
+returns setof public.stories
+language sql
+security definer
+as $$
+    select *
+    from public.stories
+    where earth_distance(
+              ll_to_earth(p_lat, p_lon),
+              ll_to_earth(latitude, longitude)
+          ) <= p_radius_km * 1000
+    order by created_at desc;
+$$;

@@ -12,21 +12,9 @@ export interface Story {
     profiles?: UserProfile; // jointure facultative
 }
 
-const TABLE = 'stories';
-const EARTH_RADIUS_KM = 6371;
-
-/* --- utilitaire distance haversine -------------------- */
-const haversine = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
-    const toRad = (deg: number) => (deg * Math.PI) / 180;
-    const dLat = toRad(lat2 - lat1);
-    const dLon = toRad(lon2 - lon1);
-    const a =
-        Math.sin(dLat / 2) ** 2 +
-        Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
-    return 2 * EARTH_RADIUS_KM * Math.asin(Math.sqrt(a));
-};
-
-/* --- création d’une story --------------------------------------------- */
+/* ------------------------------------------------------------------ */
+/*  Création de story                                    */
+/* ------------------------------------------------------------------ */
 export const createStory = async (opts: {
     userId: string;
     mediaUrl: string;
@@ -34,7 +22,7 @@ export const createStory = async (opts: {
     latitude: number;
     longitude: number;
 }): Promise<void> => {
-    const { error } = await supabase.from(TABLE).insert({
+    const { error } = await supabase.from('stories').insert({
         user_id: opts.userId,
         media_url: opts.mediaUrl,
         media_type: opts.mediaType,
@@ -44,22 +32,41 @@ export const createStory = async (opts: {
     if (error) throw error;
 };
 
-/* --- récupération des stories proches --------------------------------- */
+/* ------------------------------------------------------------------ */
+/*  Stories proches : filtrage *côté serveur* via RPC                  */
+/* ------------------------------------------------------------------ */
 export const fetchNearbyStories = async (
     latitude: number,
     longitude: number,
     radiusKm = 10,
     max = 100,
 ): Promise<Story[]> => {
-    const { data, error } = await supabase
-        .from(TABLE)
-        .select('*, profiles(id, username, avatar_url)')
-        .order('created_at', { ascending: false })
-        .limit(max);
+    /* 1. Appel de la fonction Postgres */
+    const { data, error } = await supabase.rpc('nearby_stories', {
+        p_lat: latitude,
+        p_lon: longitude,
+        p_radius_km: radiusKm,
+    });
 
     if (error) throw error;
+    const stories = (data ?? []) as Story[];
+    if (stories.length === 0) return [];
 
-    return (data as Story[]).filter(
-        (s) => haversine(latitude, longitude, s.latitude, s.longitude) <= radiusKm,
+    /* 2. Limite côté client */
+    const limited = stories.slice(0, max);
+
+    /* 3. Récupération des profils associés en une requête */
+    const userIds = Array.from(new Set(limited.map((s) => s.user_id)));
+    const { data: profData, error: profErr } = await supabase
+        .from('profiles')
+        .select('id, username, avatar_url')
+        .in('id', userIds);
+
+    if (profErr) throw profErr;
+    const profileMap = new Map(
+        (profData ?? []).map((p) => [p.id, p as UserProfile]),
     );
+
+    /* 4. Fusion data + profils */
+    return limited.map((s) => ({ ...s, profiles: profileMap.get(s.user_id) }));
 };
