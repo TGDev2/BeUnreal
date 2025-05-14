@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
     IonButton,
     IonContent,
@@ -12,14 +12,32 @@ import {
     IonToast,
     IonToolbar,
 } from '@ionic/react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
 const Login: React.FC = () => {
-    const { signIn, signUp } = useAuth();
+    const { signIn, signUp, session } = useAuth();
+    const navigate = useNavigate();
+
+    /* --------------------------------------------------
+     *  Local state
+     * ------------------------------------------------- */
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [toast, setToast] = useState<string>();
 
+    /* --------------------------------------------------
+     *  Redirect when already authenticated
+     * ------------------------------------------------- */
+    useEffect(() => {
+        if (session) {
+            navigate('/home', { replace: true });
+        }
+    }, [session, navigate]);
+
+    /* --------------------------------------------------
+     *  Helpers sign-in / sign-up
+     * ------------------------------------------------- */
     const handle =
         (action: 'in' | 'up') =>
             async () => {
@@ -27,13 +45,21 @@ const Login: React.FC = () => {
                     action === 'in'
                         ? await signIn({ email, password })
                         : await signUp({ email, password });
-                    if (action === 'up')
+
+                    if (action === 'up') {
                         setToast('Verification email sent – check your inbox.');
+                    }
+
+                    // Le useEffect ci-dessus fera la redirection dès que la session est
+                    // prête. Inutile de dupliquer le navigate ici.
                 } catch (e: any) {
                     setToast(e.message);
                 }
             };
 
+    /* --------------------------------------------------
+     *  Render
+     * ------------------------------------------------- */
     return (
         <IonPage>
             <IonHeader>
@@ -66,12 +92,7 @@ const Login: React.FC = () => {
                 <IonButton expand="block" className="ion-margin-top" onClick={handle('in')}>
                     Sign&nbsp;In
                 </IonButton>
-                <IonButton
-                    expand="block"
-                    fill="outline"
-                    className="ion-margin-top"
-                    onClick={handle('up')}
-                >
+                <IonButton expand="block" fill="outline" className="ion-margin-top" onClick={handle('up')}>
                     Create&nbsp;Account
                 </IonButton>
 
