@@ -216,3 +216,32 @@ as $$
           ) <= p_radius_km * 1000
     order by created_at desc;
 $$;
+
+-- -------------------------------------------------------
+-- RPC create_group : crée un groupe et ajoute le créateur
+-- -------------------------------------------------------
+create or replace function public.create_group(
+    p_name text
+) returns uuid
+language plpgsql
+security definer
+set search_path = public, pg_catalog
+as $$
+declare
+    new_group_id uuid;
+begin
+    -- 1. Insertion du groupe
+    insert into public.groups(name)
+    values (p_name)
+    returning id
+    into new_group_id;
+
+    -- 2. Le créateur devient propriétaire
+    insert into public.group_members(group_id, user_id, role)
+    values (new_group_id, auth.uid(), 'owner');
+
+    return new_group_id;
+end;
+$$;
+
+grant execute on function public.create_group(text) to authenticated;

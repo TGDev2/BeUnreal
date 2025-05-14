@@ -71,12 +71,17 @@ const Groups: React.FC = () => {
 
     // Gestion de la création depuis l'alerte
     const handleCreate = async (e: CustomEvent) => {
-        const { role, data } = e.detail as { role: string; data: { values: Record<string, any> } };
+        const { role, data } = e.detail as {
+            role: string;
+            data: { values: Record<string, any> };
+        };
         if (role !== 'confirm') return;
 
         const values = data.values;
         const name = (values.groupName ?? '').trim();
-        const memberIds: string[] = Array.isArray(values.contacts) ? values.contacts : [];
+        const memberIds: string[] = Array.isArray(values.contacts)
+            ? values.contacts
+            : [];
 
         if (!name) {
             setToast('Group name required');
@@ -85,7 +90,7 @@ const Groups: React.FC = () => {
 
         try {
             setBusy(true);
-            const group = await createGroup(name, uid);
+            const group = await createGroup(name);
             if (group && memberIds.length) {
                 await addMembers(group.id, memberIds);
             }

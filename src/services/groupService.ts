@@ -7,14 +7,6 @@ export interface Group {
     created_at: string;
 }
 
-/** Informations sur l’appartenance d’un utilisateur à un groupe. */
-export interface GroupMember {
-    group_id: string;
-    user_id: string;
-    role: 'owner' | 'member';
-    joined_at: string;
-}
-
 const GROUPS_TABLE = 'groups';
 const MEMBERS_TABLE = 'group_members';
 
@@ -30,32 +22,40 @@ export const getGroup = async (groupId: string): Promise<Group | null> => {
     return data as Group;
 };
 
-/**
- * Crée un nouveau groupe et ajoute immédiatement le créateur avec le rôle owner.
- * @returns Le groupe créé.
- */
-export const createGroup = async (name: string, ownerId: string): Promise<Group> => {
-    const { data, error } = await supabase
+/* ------------------------------------------------------------------
+ * Création atomique via la RPC create_group()
+ * Le JWT de l’utilisateur est transmis automatiquement par Supabase JS,
+ * la fonction ajoute l’owner en base et renvoie l’UUID du nouveau groupe.
+ * ----------------------------------------------------------------- */
+export const createGroup = async (name: string): Promise<Group> => {
+    const { data: newId, error } = await supabase.rpc('create_group', {
+        p_name: name,
+    });
+    if (error) throw error;
+
+    const { data: groupData, error: fetchErr } = await supabase
         .from(GROUPS_TABLE)
-        .insert({ name })
-        .select()
+        .select('*')
+        .eq('id', newId as string)
         .single();
 
-    if (error) throw error;
-    const group = data as Group;
-
-    const { error: memberErr } = await supabase
-        .from(MEMBERS_TABLE)
-        .insert({ group_id: group.id, user_id: ownerId, role: 'owner' });
-
-    if (memberErr && memberErr.code !== '23505') throw memberErr;
-    return group;
+    if (fetchErr) throw fetchErr;
+    return groupData as Group;
 };
 
 /** Ajoute plusieurs utilisateurs (upsert) */
-export const addMembers = async (groupId: string, userIds: string[]): Promise<void> => {
-    const rows = userIds.map((id) => ({ group_id: groupId, user_id: id, role: 'member' as const }));
-    const { error } = await supabase.from(MEMBERS_TABLE).upsert(rows, { onConflict: 'group_id,user_id' });
+export const addMembers = async (
+    groupId: string,
+    userIds: string[],
+): Promise<void> => {
+    const rows = userIds.map((id) => ({
+        group_id: groupId,
+        user_id: id,
+        role: 'member' as const,
+    }));
+    const { error } = await supabase.from(MEMBERS_TABLE).upsert(rows, {
+        onConflict: 'group_id,user_id',
+    });
     if (error) throw error;
 };
 
