@@ -31,7 +31,7 @@ const Login: React.FC = () => {
      * ------------------------------------------------- */
     useEffect(() => {
         if (session) {
-            navigate('/home', { replace: true });
+            navigate('/tabs/stories', { replace: true });
         }
     }, [session, navigate]);
 
