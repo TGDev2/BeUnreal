@@ -1,13 +1,11 @@
-import { IonApp, IonRouterOutlet, setupIonicReact } from '@ionic/react';
-import { IonReactRouter } from '@ionic/react-router';
+import { IonApp, IonReactRouter, IonRouterOutlet, setupIonicReact } from '@ionic/react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 
 import { AuthProvider } from './contexts/AuthContext';
 import PrivateRoute from './components/PrivateRoute';
 
-import Home from './pages/Home';
 import Login from './pages/Login';
-import Profile from './pages/Profile';
+import Home from './pages/Home';
 import FindFriends from './pages/FindFriends';
 import Contacts from './pages/Contacts';
 import Chat from './pages/Chat';
@@ -36,10 +34,10 @@ const App: React.FC = () => (
     <AuthProvider>
       <IonReactRouter>
         <IonRouterOutlet>
-          {/* -------- Route publique -------- */}
+          {/* Route publique */}
           <Route path="/login" element={<Login />} />
 
-          {/* -------- Container Tabs (protégé) -------- */}
+          {/* Container Tabs */}
           <Route
             path="/tabs/*"
             element={
@@ -49,73 +47,16 @@ const App: React.FC = () => (
             }
           />
 
-          {/* -------- Autres routes protégées (hors-tabs) -------- */}
-          <Route
-            path="/home"
-            element={
-              <PrivateRoute>
-                <Home />
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/profile"
-            element={
-              <PrivateRoute>
-                <Profile />
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/friends"
-            element={
-              <PrivateRoute>
-                <FindFriends />
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/contacts"
-            element={
-              <PrivateRoute>
-                <Contacts />
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/chat/:id"
-            element={
-              <PrivateRoute>
-                <Chat />
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/groups"
-            element={
-              <PrivateRoute>
-                <Groups />
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/group/:id"
-            element={
-              <PrivateRoute>
-                <GroupChat />
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/stories"
-            element={
-              <PrivateRoute>
-                <Stories />
-              </PrivateRoute>
-            }
-          />
+          {/* Routes protégées hors-tabs */}
+          <Route path="/home" element={<PrivateRoute><Home /></PrivateRoute>} />
+          <Route path="/friends" element={<PrivateRoute><FindFriends /></PrivateRoute>} />
+          <Route path="/contacts" element={<PrivateRoute><Contacts /></PrivateRoute>} />
+          <Route path="/chat/:id" element={<PrivateRoute><Chat /></PrivateRoute>} />
+          <Route path="/groups" element={<PrivateRoute><Groups /></PrivateRoute>} />
+          <Route path="/group/:id" element={<PrivateRoute><GroupChat /></PrivateRoute>} />
+          <Route path="/stories" element={<PrivateRoute><Stories /></PrivateRoute>} />
 
-          {/* -------- Redirection par défaut -------- */}
+          {/* redirection par défaut */}
           <Route path="/" element={<Navigate to="/tabs/stories" replace />} />
         </IonRouterOutlet>
       </IonReactRouter>
