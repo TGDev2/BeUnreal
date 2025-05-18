@@ -9,7 +9,9 @@
     "preview": "vite preview",
     "test.e2e": "cypress run",
     "test.unit": "vitest",
-    "lint": "eslint"
+    "lint": "eslint",
+    "android": "pnpm build && npx cap sync android && npx cap open android",
+    "android:dev": "pnpm dev & npx cap run android -l --external"
   },
   "dependencies": {
     "@capacitor/android": "^7.2.0",
@@ -21,7 +23,7 @@
     "@capacitor/keyboard": "7.0.1",
     "@capacitor/status-bar": "7.0.1",
     "@ionic/react": "^8.5.0",
-    "@ionic/react-router": "^8.5.0",
+    "@ionic/react-router": "^8.5.7",
     "@supabase/supabase-js": "^2.49.4",
     "history": "^5.3.0",
     "ionicons": "^7.4.0",
