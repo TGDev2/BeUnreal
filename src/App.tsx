@@ -1,4 +1,5 @@
-import { IonApp, IonReactRouter, IonRouterOutlet, setupIonicReact } from '@ionic/react';
+import { IonApp, IonRouterOutlet, setupIonicReact } from '@ionic/react';
+import { IonReactRouter } from '@ionic/react-router';
 import { Routes, Route, Navigate } from 'react-router-dom';
 
 import { AuthProvider } from './contexts/AuthContext';
