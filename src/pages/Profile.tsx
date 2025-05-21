@@ -17,12 +17,14 @@ import {
     IonAlert,
 } from '@ionic/react';
 import { logOutOutline, personCircleOutline, trashBinOutline } from 'ionicons/icons';
+import { useHistory } from 'react-router-dom';
 
 import { useAuth } from '../contexts/AuthContext';
 import { getProfile, upsertProfile, deleteAccount, UserProfile } from '../services/userService';
 
 const Profile: React.FC = () => {
     const { session, signOut } = useAuth();
+    const history = useHistory();
     const uid = session?.user.id;
 
     const [loading, setLoading] = useState(true);
@@ -55,6 +57,9 @@ const Profile: React.FC = () => {
         if (!uid) return;
         try {
             await upsertProfile({ id: uid, username, avatar_url: avatarUrl });
+            // Re-charge depuis la BDD pour refléter la valeur réellement stockée
+            const refreshed = await getProfile(uid);
+            if (refreshed) setProfile(refreshed);
             setToast('Profile updated');
         } catch (e: any) {
             setToast(e.message);
@@ -70,6 +75,12 @@ const Profile: React.FC = () => {
         } catch (e: any) {
             setToast(e.message);
         }
+    };
+
+    /* — Déconnexion + redirection sûre — */
+    const handleSignOut = async () => {
+        await signOut();
+        history.replace('/login');          // évite le white screen
     };
 
     if (loading) {

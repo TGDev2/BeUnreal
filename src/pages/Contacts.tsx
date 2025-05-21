@@ -15,6 +15,7 @@ import {
     IonIcon,
 } from '@ionic/react';
 import { useAuth } from '../contexts/AuthContext';
+import { useIonViewWillEnter } from '@ionic/react';
 import { getContacts } from '../services/contactService';
 import { useEffect, useState } from 'react';
 import { getProfile, UserProfile } from '../services/userService';
@@ -29,20 +30,30 @@ const Contacts: React.FC = () => {
     const [busy, setBusy] = useState(true);
     const [toast, setToast] = useState<string>();
 
-    /* --- Initial load ---------------------------------------------------- */
+    // ─── Fetch réutilisable ────────────────────────────────────────────────
+    const fetchContacts = async (mounted = true) => {
+      try {
+        const data = await getContacts(uid);
+        if (mounted) setContacts(data);
+      } catch (e: any) {
+        if (mounted) setToast(e.message);
+      } finally {
+        if (mounted) setBusy(false);
+      }
+    };
+
+    // 1) au premier montage
     useEffect(() => {
-        const fetchContacts = async () => {
-            try {
-                const data = await getContacts(uid);
-                setContacts(data);
-            } catch (e: any) {
-                setToast(e.message);
-            } finally {
-                setBusy(false);
-            }
-        };
-        fetchContacts();
+      let m = true;
+      fetchContacts(m);
+      return () => { m = false };
     }, [uid]);
+
+    // 2) à chaque fois qu'on revient sur l'onglet Contacts
+    useIonViewWillEnter(() => {
+      setBusy(true);
+      fetchContacts();
+    });
 
     /* --- Realtime : nouvel ami ajouté ------------------------------------ */
     useEffect(() => {
@@ -63,7 +74,7 @@ const Contacts: React.FC = () => {
                         const prof = await getProfile(newContactId);
                         if (!prof) return;
                         setContacts(prev => 
-                            prev.some(c => c.id === prof.id) ? prev : [...prev, prof],
+                            prev.some(c => c.id === prof.id) ? prev : [...prev, prof]
                         );
                     } catch {/* ignore */}
                 }

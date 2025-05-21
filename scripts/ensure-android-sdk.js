@@ -87,6 +87,24 @@ fs.writeFileSync(gradleProps, content);
 console.log(`✅  ${gradleProps} → org.gradle.java.home=${javaHome}`);
 
 /*─────────────────────────────*
+ * 3.  adb dans le PATH courant
+ *─────────────────────────────*/
+const adbDir = path.join(sdk, 'platform-tools');
+const hasAdb   = fs.existsSync(path.join(adbDir, process.platform === 'win32' ? 'adb.exe' : 'adb'));
+if (!hasAdb) {
+    abort(
+        'adb (Android Platform-Tools) manquant dans votre SDK. ' +
+        'Ouvrez Android Studio > SDK Manager et installez « Android SDK Platform-Tools »'
+    );
+}
+
+// Injecte platform-tools en tête du PATH *pour ce process* et tous ses enfants
+if (!process.env.PATH.split(path.delimiter).includes(adbDir)) {
+    process.env.PATH = `${adbDir}${path.delimiter}${process.env.PATH}`;
+    console.log(`✅  PATH ← +${adbDir}`);
+}
+
+/*─────────────────────────────*
  * Tout est OK
  *─────────────────────────────*/
 console.log('🎉  Environnement Android prêt – JDK 21 détecté.');
