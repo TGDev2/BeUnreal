@@ -38,10 +38,23 @@ const Stories: React.FC = () => {
 
     const videoInputRef = useRef<HTMLInputElement | null>(null);
 
+    const ensureLocationPermission = async (): Promise<void> => {
+        const { location } = await Geolocation.checkPermissions();
+        if (location === 'granted') return;
+
+        const req = await Geolocation.requestPermissions();
+        if (req.location !== 'granted') {
+            throw new Error('Location permission is required to fetch nearby stories.');
+        }
+    };
+
     /* ---------- Chargement des stories proches ---------- */
     const loadStories = async () => {
         try {
             setBusy(true);
+            /* ➋ Vérifie / demande l'autorisation */
+            await ensureLocationPermission();
+
             const {
                 coords: { latitude, longitude },
             } = await Geolocation.getCurrentPosition({ enableHighAccuracy: true });
@@ -61,13 +74,14 @@ const Stories: React.FC = () => {
     /* ---------- Ajout photo ---------- */
     const addPhotoStory = async () => {
         try {
+            await ensureLocationPermission();
             const {
                 coords: { latitude, longitude },
             } = await Geolocation.getCurrentPosition({ enableHighAccuracy: true });
 
             const photo = await Camera.getPhoto({
                 quality: 85,
-                resultType: CameraResultType.DataUrl,
+                resultType: CameraResultType.DataUrl,   // garde DataUrl
                 source: CameraSource.Camera,
             });
             if (!photo.dataUrl) return;
@@ -75,7 +89,6 @@ const Stories: React.FC = () => {
             const mediaUrl = await uploadStoryImage(photo.dataUrl);
 
             await createStory({
-                userId: uid,
                 mediaUrl,
                 mediaType: 'image',
                 latitude,
@@ -114,6 +127,7 @@ const Stories: React.FC = () => {
         }
 
         try {
+            await ensureLocationPermission();
             const {
                 coords: { latitude, longitude },
             } = await Geolocation.getCurrentPosition({ enableHighAccuracy: true });
@@ -121,7 +135,6 @@ const Stories: React.FC = () => {
             const mediaUrl = await uploadStoryVideo(file);
 
             await createStory({
-                userId: uid,
                 mediaUrl,
                 mediaType: 'video',
                 latitude,
@@ -176,7 +189,12 @@ const Stories: React.FC = () => {
                 />
 
                 {/* ---------- Action FAB ---------- */}
-                <IonFab vertical="bottom" horizontal="end">
+                <IonFab
+                    vertical="bottom"
+                    horizontal="end"
+                    edge={false}
+                    style={{ bottom: 'calc(env(safe-area-inset-bottom) + 72px)' }}  // ~72 px ≈ hauteur TabBar
+                >
                     <IonFabButton onClick={() => setSheetOpen(true)}>
                         <IonIcon icon={add} />
                     </IonFabButton>

@@ -16,18 +16,16 @@ export interface Story {
 /*  Création de story                                    */
 /* ------------------------------------------------------------------ */
 export const createStory = async (opts: {
-    userId: string;
     mediaUrl: string;
     mediaType: 'image' | 'video';
     latitude: number;
     longitude: number;
 }): Promise<void> => {
     const { error } = await supabase.from('stories').insert({
-        user_id: opts.userId,
         media_url: opts.mediaUrl,
         media_type: opts.mediaType,
         latitude: opts.latitude,
-        longitude: opts.longitude,
+        longitude: opts.longitude
     });
     if (error) throw error;
 };
