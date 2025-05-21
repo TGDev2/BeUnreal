@@ -14,11 +14,12 @@ import {
     IonFabButton,
     IonIcon,
 } from '@ionic/react';
-import { personAddOutline } from 'ionicons/icons';
 import { useAuth } from '../contexts/AuthContext';
 import { getContacts } from '../services/contactService';
 import { useEffect, useState } from 'react';
-import { UserProfile } from '../services/userService';
+import { UserProfile, getProfile } from '../services/userService';
+import { supabase } from '../services/supabaseClient';
+import { personAddOutline } from 'ionicons/icons';
 
 const Contacts: React.FC = () => {
     const { session } = useAuth();
@@ -28,7 +29,7 @@ const Contacts: React.FC = () => {
     const [busy, setBusy] = useState(true);
     const [toast, setToast] = useState<string>();
 
-    /* Charge la liste des contacts à l’ouverture */
+    /* --- Initial load ---------------------------------------------------- */
     useEffect(() => {
         const fetchContacts = async () => {
             try {
@@ -41,6 +42,40 @@ const Contacts: React.FC = () => {
             }
         };
         fetchContacts();
+    }, [uid]);
+
+    /* --- Realtime : nouvel ami ajouté ------------------------------------ */
+    useEffect(() => {
+        // Création du canal
+        const channel = supabase
+            .channel(`contacts:${uid}`)
+            .on(
+                'postgres_changes',
+                {
+                    event: 'INSERT',
+                    schema: 'public',
+                    table: 'contacts',
+                    filter: `user_id=eq.${uid}`,
+                },
+                async (payload) => {
+                    const newContactId = (payload.new as { contact_id: string }).contact_id;
+                    try {
+                        const prof = await getProfile(newContactId);
+                        if (!prof) return;
+                        setContacts((prev) =>
+                            prev.some((c) => c.id === prof.id) ? prev : [...prev, prof]
+                        );
+                    } catch {
+                        // ignore
+                    }
+                }
+            )
+            .subscribe();
+
+        // Cleanup : suppression synchrone du canal
+        return () => {
+            supabase.removeChannel(channel);
+        };
     }, [uid]);
 
     return (
@@ -79,12 +114,12 @@ const Contacts: React.FC = () => {
                     </IonList>
                 )}
 
-                {/* — Accès direct à la recherche d'amis — */}
+                {/* --- Bouton "Ajouter" (vers Find friends) ---------------------- */}
                 <IonFab
                     vertical="bottom"
                     horizontal="end"
                     edge={false}
-                    style={{ bottom: 'calc(env(safe-area-inset-bottom) + 72px)' }}  /* au-dessus du TabBar */
+                    style={{ bottom: 'calc(env(safe-area-inset-bottom) + 72px)' }}
                 >
                     <IonFabButton routerLink="/friends">
                         <IonIcon icon={personAddOutline} />
