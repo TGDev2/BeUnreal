@@ -89,9 +89,7 @@ supabase db remote execute "
 ## 6 . Build Android
 
 ```bash
-pnpm build                   # transpile + Vite
-npx cap sync android         # copie dist/ vers android/
-npx cap open android         # ouvre Android Studio
+pnpm android
 # ⇒ Build > Build Bundle / APK > Build APK(s)
 ```
 
