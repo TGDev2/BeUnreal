@@ -16,16 +16,20 @@ export interface Story {
 /*  Création de story                                    */
 /* ------------------------------------------------------------------ */
 export const createStory = async (opts: {
+    /** URL publique du média déjà uploadé */
     mediaUrl: string;
     mediaType: 'image' | 'video';
     latitude: number;
     longitude: number;
+    /** Id de l'utilisateur ; impose la cohérence RLS */
+    userId: string;
 }): Promise<void> => {
     const { error } = await supabase.from('stories').insert({
+        user_id: opts.userId,
         media_url: opts.mediaUrl,
         media_type: opts.mediaType,
         latitude: opts.latitude,
-        longitude: opts.longitude
+        longitude: opts.longitude,
     });
     if (error) throw error;
 };

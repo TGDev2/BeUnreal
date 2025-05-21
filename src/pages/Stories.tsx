@@ -89,6 +89,7 @@ const Stories: React.FC = () => {
             const mediaUrl = await uploadStoryImage(photo.dataUrl);
 
             await createStory({
+                userId: uid,
                 mediaUrl,
                 mediaType: 'image',
                 latitude,
@@ -135,6 +136,7 @@ const Stories: React.FC = () => {
             const mediaUrl = await uploadStoryVideo(file);
 
             await createStory({
+                userId: uid,
                 mediaUrl,
                 mediaType: 'video',
                 latitude,

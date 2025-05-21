@@ -11,7 +11,7 @@
     "test.unit": "vitest",
     "lint": "eslint",
     "preandroid": "node scripts/ensure-android-sdk.js",
-    "android": "pnpm build && npx cap sync android && npx cap open android",
+    "android": "pnpm build && npx cap sync android && npx cap run android",
     "preandroid:dev": "node scripts/ensure-android-sdk.js",
     "android:dev": "pnpm dev & npx cap run android -l --external",
     "postinstall": "patch-package"
