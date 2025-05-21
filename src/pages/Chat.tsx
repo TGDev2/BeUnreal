@@ -62,11 +62,13 @@ const Chat: React.FC = () => {
         load();
     }, [uid, contactId]);
 
-    /* ---------- Realtime (avec cleanup) ---------- */
+    /* ---------- Realtime (avec cleanup & déduplication) ---------- */
     useEffect(() => {
-        const unsubscribe = subscribeToConversation(uid, contactId, (msg) =>
-            setMessages((prev) => [...prev, msg]),
-        );
+        const unsubscribe = subscribeToConversation(uid, contactId, (msg) => {
+            setMessages(prev => 
+                prev.some(m => m.id === msg.id) ? prev : [...prev, msg]
+            );
+        });
         return () => unsubscribe();
     }, [uid, contactId]);
 
@@ -78,6 +80,18 @@ const Chat: React.FC = () => {
         const trimmed = text.trim();
         if (!trimmed) return;
         setText('');
+        
+        // mise à jour locale immédiate 
+        const optimistic: Message = { 
+            id: `tmp-${Date.now()}`, 
+            sender_id: uid, 
+            recipient_id: contactId, 
+            content: trimmed, 
+            image_url: null, 
+            created_at: new Date().toISOString(), 
+        }; 
+        setMessages(prev => [...prev, optimistic]); 
+        
         try {
             await sendMessage({ senderId: uid, recipientId: contactId, content: trimmed });
         } catch (e: any) {
@@ -141,7 +155,7 @@ const Chat: React.FC = () => {
         <IonPage>
             <IonHeader>
                 <IonToolbar>
-                    <IonTitle>{contact?.username ?? 'Chat'}</IonTitle>
+                    <IonTitle>{contact?.username || contact?.email || 'Chat'}</IonTitle>
                 </IonToolbar>
             </IonHeader>
 

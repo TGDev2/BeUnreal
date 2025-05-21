@@ -17,7 +17,7 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import { getContacts } from '../services/contactService';
 import { useEffect, useState } from 'react';
-import { UserProfile, getProfile } from '../services/userService';
+import { getProfile, UserProfile } from '../services/userService';
 import { supabase } from '../services/supabaseClient';
 import { personAddOutline } from 'ionicons/icons';
 
@@ -25,7 +25,7 @@ const Contacts: React.FC = () => {
     const { session } = useAuth();
     const uid = session!.user.id;
 
-    const [contacts, setContacts] = useState<UserProfile[]>([]);
+    const [contacts, setContacts]   = useState<UserProfile[]>([]);
     const [busy, setBusy] = useState(true);
     const [toast, setToast] = useState<string>();
 
@@ -62,12 +62,10 @@ const Contacts: React.FC = () => {
                     try {
                         const prof = await getProfile(newContactId);
                         if (!prof) return;
-                        setContacts((prev) =>
-                            prev.some((c) => c.id === prof.id) ? prev : [...prev, prof]
+                        setContacts(prev => 
+                            prev.some(c => c.id === prof.id) ? prev : [...prev, prof],
                         );
-                    } catch {
-                        // ignore
-                    }
+                    } catch {/* ignore */}
                 }
             )
             .subscribe();
@@ -91,7 +89,7 @@ const Contacts: React.FC = () => {
 
                 {!busy && (
                     <IonList>
-                        {contacts.map((c) => (
+                        {contacts.map(c => (
                             <IonItem key={c.id} routerLink={`/chat/${c.id}`}>
                                 {c.avatar_url && (
                                     <IonAvatar slot="start">
@@ -99,8 +97,8 @@ const Contacts: React.FC = () => {
                                     </IonAvatar>
                                 )}
                                 <IonLabel>
-                                    <h2>{c.username ?? 'Unnamed user'}</h2>
-                                    <p>{c.email}</p>
+                                    <h2>{c.username || c.email || 'Unnamed user'}</h2>
+                                    {c.username && <p>{c.email}</p>}
                                 </IonLabel>
                             </IonItem>
                         ))}
