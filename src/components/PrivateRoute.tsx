@@ -1,5 +1,5 @@
 import { ReactNode } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Redirect } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import FullScreenLoader from './FullScreenLoader';
 
@@ -14,12 +14,9 @@ interface PrivateRouteProps {
 const PrivateRoute: React.FC<PrivateRouteProps> = ({ children }) => {
     const { session, loading } = useAuth();
 
-    if (loading) {
-        // ↳ Phase d’initialisation : on montre un spinner
-        return <FullScreenLoader />;
-    }
+    if (loading) return <FullScreenLoader />;
 
-    return session ? <>{children}</> : <Navigate to="/login" replace />;
+    return session ? <>{children}</> : <Redirect to="/login" />;
 };
 
 export default PrivateRoute;

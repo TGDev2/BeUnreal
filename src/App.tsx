@@ -1,6 +1,6 @@
 import { IonApp, IonRouterOutlet, setupIonicReact } from '@ionic/react';
 import { IonReactRouter } from '@ionic/react-router';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Route, Redirect } from 'react-router-dom';
 
 import { AuthProvider } from './contexts/AuthContext';
 import PrivateRoute from './components/PrivateRoute';
@@ -35,30 +35,30 @@ const App: React.FC = () => (
     <AuthProvider>
       <IonReactRouter>
         <IonRouterOutlet>
-          {/* Route publique */}
-          <Route path="/login" element={<Login />} />
+          {/* --- Public --- */}
+          <Route exact path="/login" component={Login} />
 
-          {/* Container Tabs */}
+          {/* --- Container Tabs (protégé) --- */}
           <Route
-            path="/tabs/*"
-            element={
+            path="/tabs"
+            render={() => (
               <PrivateRoute>
                 <Tabs />
               </PrivateRoute>
-            }
+            )}
           />
 
-          {/* Routes protégées hors-tabs */}
-          <Route path="/home" element={<PrivateRoute><Home /></PrivateRoute>} />
-          <Route path="/friends" element={<PrivateRoute><FindFriends /></PrivateRoute>} />
-          <Route path="/contacts" element={<PrivateRoute><Contacts /></PrivateRoute>} />
-          <Route path="/chat/:id" element={<PrivateRoute><Chat /></PrivateRoute>} />
-          <Route path="/groups" element={<PrivateRoute><Groups /></PrivateRoute>} />
-          <Route path="/group/:id" element={<PrivateRoute><GroupChat /></PrivateRoute>} />
-          <Route path="/stories" element={<PrivateRoute><Stories /></PrivateRoute>} />
+          {/* --- Routes protégées hors-tabs --- */}
+          <Route exact path="/home"         render={() => <PrivateRoute><Home /></PrivateRoute>} />
+          <Route exact path="/friends"      render={() => <PrivateRoute><FindFriends /></PrivateRoute>} />
+          <Route exact path="/contacts"     render={() => <PrivateRoute><Contacts /></PrivateRoute>} />
+          <Route exact path="/chat/:id"     render={() => <PrivateRoute><Chat /></PrivateRoute>} />
+          <Route exact path="/groups"       render={() => <PrivateRoute><Groups /></PrivateRoute>} />
+          <Route exact path="/group/:id"    render={() => <PrivateRoute><GroupChat /></PrivateRoute>} />
+          <Route exact path="/stories"      render={() => <PrivateRoute><Stories /></PrivateRoute>} />
 
-          {/* redirection par défaut */}
-          <Route path="/" element={<Navigate to="/tabs/stories" replace />} />
+          {/* --- Fallback racine --- */}
+          <Route exact path="/" render={() => <Redirect to="/tabs/stories" />} />
         </IonRouterOutlet>
       </IonReactRouter>
     </AuthProvider>

@@ -6,7 +6,7 @@ import {
     IonIcon,
     IonLabel,
 } from '@ionic/react';
-import { Route, Navigate } from 'react-router-dom';
+import { Route, Redirect } from 'react-router-dom';
 
 import {
     locationOutline,
@@ -26,14 +26,13 @@ import Profile from './Profile';
  */
 const Tabs: React.FC = () => (
     <IonTabs>
-        {/* --- Outlet interne aux tabs --- */}
+        {/* --- Outlet interne --- */}
         <IonRouterOutlet>
-            <Route path="stories" element={<Stories />} />
-            <Route path="contacts" element={<Contacts />} />
-            <Route path="groups" element={<Groups />} />
-            <Route path="profile" element={<Profile />} />
-            {/* /tabs  →  /tabs/stories */}
-            <Route index element={<Navigate to="stories" replace />} />
+            <Route exact path="/tabs/stories" component={Stories} />
+            <Route exact path="/tabs/contacts" component={Contacts} />
+            <Route exact path="/tabs/groups" component={Groups} />
+            <Route exact path="/tabs/profile" component={Profile} />
+            <Route exact path="/tabs" render={() => <Redirect to="/tabs/stories" />} />
         </IonRouterOutlet>
 
         {/* --- Barre d’onglets --- */}

@@ -12,12 +12,12 @@ import {
     IonToast,
     IonToolbar,
 } from '@ionic/react';
-import { useNavigate } from 'react-router-dom';
+import { useHistory } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
 const Login: React.FC = () => {
     const { signIn, signUp, session } = useAuth();
-    const navigate = useNavigate();
+    const history = useHistory();
 
     /* --------------------------------------------------
      *  Local state
@@ -31,9 +31,9 @@ const Login: React.FC = () => {
      * ------------------------------------------------- */
     useEffect(() => {
         if (session) {
-            navigate('/tabs/stories', { replace: true });
+            history.replace('/tabs/stories');
         }
-    }, [session, navigate]);
+    }, [session, history]);
 
     /* --------------------------------------------------
      *  Helpers sign-in / sign-up

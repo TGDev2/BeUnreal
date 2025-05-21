@@ -14,7 +14,7 @@ import {
     IonToolbar,
     type AlertInput,
 } from '@ionic/react';
-import { useNavigate } from 'react-router-dom';
+import { useHistory } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { addMembers, createGroup, getUserGroups, Group } from '../services/groupService';
 import { getContacts } from '../services/contactService';
@@ -23,7 +23,7 @@ import { UserProfile } from '../services/userService';
 const Groups: React.FC = () => {
     const { session } = useAuth();
     const uid = session!.user.id;
-    const navigate = useNavigate();
+    const history = useHistory();
 
     const [groups, setGroups] = useState<Group[]>([]);
     const [contacts, setContacts] = useState<UserProfile[]>([]);
@@ -95,7 +95,7 @@ const Groups: React.FC = () => {
                 await addMembers(group.id, memberIds);
             }
             await refreshGroups();
-            navigate(`/group/${group.id}`);
+            history.push(`/group/${group.id}`);
         } catch (err: any) {
             setToast(err.message);
         } finally {
