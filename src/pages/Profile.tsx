@@ -16,11 +16,20 @@ import {
     IonToolbar,
     IonAlert,
 } from '@ionic/react';
-import { logOutOutline, personCircleOutline, trashBinOutline } from 'ionicons/icons';
+import {
+    logOutOutline,
+    personCircleOutline,
+    trashBinOutline,
+} from 'ionicons/icons';
 import { useHistory } from 'react-router-dom';
 
 import { useAuth } from '../contexts/AuthContext';
-import { getProfile, upsertProfile, deleteAccount, UserProfile } from '../services/userService';
+import {
+    getProfile,
+    upsertProfile,
+    deleteAccount,
+    UserProfile,
+} from '../services/userService';
 
 const Profile: React.FC = () => {
     const { session, signOut } = useAuth();
@@ -34,7 +43,7 @@ const Profile: React.FC = () => {
     const [toast, setToast] = useState<string>();
     const [confirmOpen, setConfirmOpen] = useState(false);
 
-    /* — Chargement du profil — */
+    /* ---------- Chargement profil ---------- */
     useEffect(() => {
         const fetch = async () => {
             if (!uid) return;
@@ -52,12 +61,11 @@ const Profile: React.FC = () => {
         fetch();
     }, [uid]);
 
-    /* — Sauvegarde — */
+    /* ---------- Mise à jour ---------- */
     const save = async () => {
         if (!uid) return;
         try {
             await upsertProfile({ id: uid, username, avatar_url: avatarUrl });
-            // Re-charge depuis la BDD pour refléter la valeur réellement stockée
             const refreshed = await getProfile(uid);
             if (refreshed) setProfile(refreshed);
             setToast('Profile updated');
@@ -66,23 +74,31 @@ const Profile: React.FC = () => {
         }
     };
 
-    /* — Suppression de compte — */
+    /* ---------- Déconnexion ---------- */
+    const handleSignOut = async () => {
+        // ➊ redirection immédiate – évite l’écran blanc
+        history.replace('/login');
+        // ➋ déconnexion asynchrone
+        try {
+            await signOut();
+        } catch {
+            /* ignoré : l’utilisateur est déjà sur /login */
+        }
+    };
+
+    /* ---------- Suppression de compte ---------- */
     const handleDelete = async () => {
         if (!uid) return;
         try {
             await deleteAccount(uid);
+            history.replace('/login');
             await signOut();
         } catch (e: any) {
             setToast(e.message);
         }
     };
 
-    /* — Déconnexion + redirection sûre — */
-    const handleSignOut = async () => {
-        await signOut();
-        history.replace('/login');          // évite le white screen
-    };
-
+    /* ---------- Rendu ---------- */
     if (loading) {
         return (
             <IonPage>
@@ -141,7 +157,12 @@ const Profile: React.FC = () => {
                     Save
                 </IonButton>
 
-                <IonButton expand="block" fill="outline" color="medium" onClick={signOut}>
+                <IonButton
+                    expand="block"
+                    fill="outline"
+                    color="medium"
+                    onClick={handleSignOut}
+                >
                     <IonIcon icon={logOutOutline} slot="start" />
                     Sign&nbsp;Out
                 </IonButton>
@@ -156,18 +177,14 @@ const Profile: React.FC = () => {
                     Delete&nbsp;Account
                 </IonButton>
 
-                {/* — Confirmation irréversible — */}
+                {/* Confirmation irréversible */}
                 <IonAlert
                     isOpen={confirmOpen}
                     header="Delete account"
                     message="This action permanently deletes your account and all associated data. It cannot be undone."
                     buttons={[
                         { text: 'Cancel', role: 'cancel' },
-                        {
-                            text: 'Delete',
-                            role: 'destructive',
-                            handler: handleDelete,
-                        },
+                        { text: 'Delete', role: 'destructive', handler: handleDelete },
                     ]}
                     onDidDismiss={() => setConfirmOpen(false)}
                 />
