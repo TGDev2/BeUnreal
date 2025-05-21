@@ -10,7 +10,11 @@ import {
     IonTitle,
     IonToolbar,
     IonToast,
+    IonFab,
+    IonFabButton,
+    IonIcon,
 } from '@ionic/react';
+import { personAddOutline } from 'ionicons/icons';
 import { useAuth } from '../contexts/AuthContext';
 import { getContacts } from '../services/contactService';
 import { useEffect, useState } from 'react';
@@ -68,12 +72,24 @@ const Contacts: React.FC = () => {
                         {contacts.length === 0 && (
                             <IonItem lines="none">
                                 <IonLabel className="ion-text-center">
-                                    You don’t have any contacts yet.
+                                    You don't have any contacts yet.
                                 </IonLabel>
                             </IonItem>
                         )}
                     </IonList>
                 )}
+
+                {/* — Accès direct à la recherche d'amis — */}
+                <IonFab
+                    vertical="bottom"
+                    horizontal="end"
+                    edge={false}
+                    style={{ bottom: 'calc(env(safe-area-inset-bottom) + 72px)' }}  /* au-dessus du TabBar */
+                >
+                    <IonFabButton routerLink="/friends">
+                        <IonIcon icon={personAddOutline} />
+                    </IonFabButton>
+                </IonFab>
 
                 <IonToast
                     isOpen={!!toast}
