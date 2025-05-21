@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import {
+    IonAlert,
     IonButton,
     IonContent,
     IonHeader,
@@ -15,7 +16,12 @@ import {
     IonToast,
     IonToolbar,
 } from '@ionic/react';
-import { cameraOutline, sendOutline, videocamOutline } from 'ionicons/icons';
+import {
+    cameraOutline,
+    sendOutline,
+    videocamOutline,
+    personAddOutline,
+} from 'ionicons/icons';
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { useAuth } from '../contexts/AuthContext';
 import {
@@ -24,8 +30,15 @@ import {
     sendGroupMessage,
     subscribeToGroupMessages,
 } from '../services/groupMessageService';
-import { getGroup } from '../services/groupService';
+import {
+    addMembers,
+    getGroup,
+    getGroupMembers,
+} from '../services/groupService';
+import { getContacts } from '../services/contactService';
 import { uploadChatImage, uploadChatVideo } from '../services/mediaService';
+import { UserProfile } from '../services/userService';
+import type { AlertInput } from '@ionic/react';
 
 const MAX_VIDEO_SECONDS = 10;
 
@@ -45,16 +58,27 @@ const GroupChat: React.FC = () => {
     const bottomRef = useRef<HTMLDivElement | null>(null);
     const videoInputRef = useRef<HTMLInputElement | null>(null);
 
-    /* ---------- Chargement initial groupe + historique ---------- */
+    /* ──────────────────────────────── 
+     *  Gestion des membres 
+     * ────────────────────────────────*/
+    const [members,  setMembers]  = useState<UserProfile[]>([]);
+    const [contacts, setContacts] = useState<UserProfile[]>([]);
+    const [showAdd,  setShowAdd]  = useState(false);
+
+    /* ---------- Chargement initial groupe + historique + membres + contacts ---------- */
     useEffect(() => {
         const load = async () => {
             try {
-                const [grp, hist] = await Promise.all([
+                const [grp, hist, mems, myContacts] = await Promise.all([
                     getGroup(groupId),
                     fetchGroupMessages(groupId),
+                    getGroupMembers(groupId),
+                    getContacts(uid),
                 ]);
                 if (grp) setGroupName(grp.name);
                 setMessages(hist);
+                setMembers(mems);
+                setContacts(myContacts);
             } catch (e: any) {
                 setToast(e.message);
             } finally {
@@ -62,7 +86,7 @@ const GroupChat: React.FC = () => {
             }
         };
         load();
-    }, [groupId]);
+    }, [groupId, uid]);
 
     /* ---------- Abonnement temps-réel (avec cleanup) ---------- */
     useEffect(() => {
@@ -74,6 +98,47 @@ const GroupChat: React.FC = () => {
 
     /* ---------- Scroll auto ---------- */
     useEffect(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), [messages]);
+
+    /* ---------- Ajout de nouveaux membres ---------- */
+    const handleAddMembers = async (e: CustomEvent) => {
+        const { role, data } = e.detail as {
+            role: string;
+            data: { values: Record<string, any> };
+        };
+        if (role !== 'confirm') return;
+
+        const ids: string[] = Array.isArray(data.values.contacts)
+            ? data.values.contacts
+            : [];
+
+        if (ids.length === 0) return;
+
+        try {
+            setBusy(true);
+            await addMembers(groupId, ids);
+            const refreshed = await getGroupMembers(groupId);
+            setMembers(refreshed);
+            setToast(`${ids.length} member(s) added`);
+        } catch (err: any) {
+            setToast(err.message);
+        } finally {
+            setBusy(false);
+            setShowAdd(false);
+        }
+    };
+
+    /* ---------- Inputs à cocher : seulement les contacts non-membres ---------- */
+    /** 
+     * Inputs à cocher : seulement les contacts non-membres 
+     * Typés explicitement pour AlertInput afin que `type: 'checkbox'` soit reconnu 
+     */
+    const selectableContacts = contacts.filter((c) => !members.some((m) => m.id === c.id));
+    const alertInputs: AlertInput[] = selectableContacts.map((c) => ({
+        name : 'contacts',
+        type : 'checkbox' as const,
+        label: c.username ?? c.email ?? 'Unnamed user',
+        value: c.id,
+    }));
 
     /* ---------- Envoi texte ---------- */
     const sendText = async () => {
@@ -143,6 +208,11 @@ const GroupChat: React.FC = () => {
             <IonHeader>
                 <IonToolbar>
                     <IonTitle>{groupName}</IonTitle>
+
+                    {/* bouton Add */}
+                    <IonButton slot="end" onClick={() => setShowAdd(true)}>
+                        <IonIcon icon={personAddOutline} />
+                    </IonButton>
                 </IonToolbar>
             </IonHeader>
 
@@ -220,6 +290,18 @@ const GroupChat: React.FC = () => {
                     <IonIcon icon={sendOutline} />
                 </IonButton>
             </IonItem>
+
+            {/* ---------- Alerte « Ajouter des membres » ---------- */}
+            <IonAlert
+                isOpen={showAdd}
+                header="Add members"
+                inputs={alertInputs}
+                buttons={[
+                    { text: 'Cancel', role: 'cancel' },
+                    { text: 'Add',    role: 'confirm' },
+                ]}
+                onDidDismiss={handleAddMembers}
+            />
 
             <IonToast
                 isOpen={!!toast}

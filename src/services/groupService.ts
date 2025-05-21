@@ -1,4 +1,5 @@
 import { supabase } from './supabaseClient';
+import { UserProfile } from './userService';
 
 /** Représentation d’un groupe de discussion. */
 export interface Group {
@@ -10,7 +11,9 @@ export interface Group {
 const GROUPS_TABLE = 'groups';
 const MEMBERS_TABLE = 'group_members';
 
-/* -------- Lecture d’un groupe par id ------------------------ */
+/* ────────────────────────────────
+ * Lecture d’un groupe par id
+ * ────────────────────────────────*/
 export const getGroup = async (groupId: string): Promise<Group | null> => {
     const { data, error } = await supabase
         .from(GROUPS_TABLE)
@@ -22,11 +25,9 @@ export const getGroup = async (groupId: string): Promise<Group | null> => {
     return data as Group;
 };
 
-/* ------------------------------------------------------------------
- * Création atomique via la RPC create_group()
- * Le JWT de l’utilisateur est transmis automatiquement par Supabase JS,
- * la fonction ajoute l’owner en base et renvoie l’UUID du nouveau groupe.
- * ----------------------------------------------------------------- */
+/* ────────────────────────────────
+ * Création atomique + owner
+ * ────────────────────────────────*/
 export const createGroup = async (name: string): Promise<Group> => {
     const { data: newId, error } = await supabase.rpc('create_group', {
         p_name: name,
@@ -43,7 +44,9 @@ export const createGroup = async (name: string): Promise<Group> => {
     return groupData as Group;
 };
 
-/** Ajoute plusieurs utilisateurs (upsert) */
+/* ────────────────────────────────
+ * Ajout (upsert) de membres
+ * ────────────────────────────────*/
 export const addMembers = async (
     groupId: string,
     userIds: string[],
@@ -59,8 +62,10 @@ export const addMembers = async (
     if (error) throw error;
 };
 
-/** Liste des groupes d’un utilisateur */
-export const getUserGroups = async (userId: string): Promise<Group[]> => {
+/* ────────────────────────────────
+ * Liste des groupes d’un utilisateur
+ * ────────────────────────────────*/
+export const getUserGroups = async (userId: string) => {
     const { data, error } = await supabase
         .from(MEMBERS_TABLE)
         .select('groups(id,name,created_at)')
@@ -68,4 +73,19 @@ export const getUserGroups = async (userId: string): Promise<Group[]> => {
 
     if (error) throw error;
     return (data ?? []).map((r: any) => r.groups as Group);
+};
+
+/* ────────────────────────────────
+ * Membres actuels d’un groupe
+ * ────────────────────────────────*/
+export const getGroupMembers = async (
+    groupId: string,
+): Promise<UserProfile[]> => {
+    const { data, error } = await supabase
+        .from(MEMBERS_TABLE)
+        .select('profiles:profiles(id, username, avatar_url, email, created_at)')
+        .eq('group_id', groupId);
+
+    if (error) throw error;
+    return (data ?? []).map((row: any) => row.profiles as UserProfile);
 };
