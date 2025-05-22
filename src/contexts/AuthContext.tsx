@@ -1,7 +1,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { Session } from '@supabase/supabase-js';
 import { supabase } from '../services/supabaseClient';
-import { upsertProfile } from '../services/userService';
 
 interface AuthContextValue {
     session: Session | null;
@@ -17,14 +16,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const [session, setSession] = useState<Session | null>(null);
     const [loading, setLoading] = useState(true);
 
-    // Initial session load + listener
+    /* ───────────────────────────────────────────────
+     *  Charge la session persistée + listener global
+     * ─────────────────────────────────────────────── */
     useEffect(() => {
-        const init = async () => {
+        (async () => {
             const { data } = await supabase.auth.getSession();
             setSession(data.session ?? null);
             setLoading(false);
-        };
-        init();
+        })();
 
         const {
             data: { subscription },
@@ -35,24 +35,54 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return () => subscription.unsubscribe();
     }, []);
 
-    const signIn = async ({ email, password }: { email: string; password: string }) => {
-        setLoading(true);
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        setLoading(false);
-        if (error) throw error;
+    /* ───────────────────────────────────────────────
+     *  Helpers
+     * ─────────────────────────────────────────────── */
+    const refreshSession = async () => {
+        const { data } = await supabase.auth.getSession();
+        if (data.session) setSession(data.session);
+        return data.session;
     };
 
-    const signUp = async ({ email, password }: { email: string; password: string }) => {
+    const signIn = async ({
+        email,
+        password,
+    }: {
+        email: string;
+        password: string;
+    }) => {
         setLoading(true);
-        const { error } = await supabase.auth.signUp({ email, password });
+
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        const sess = await refreshSession();
 
         setLoading(false);
+
+        /* S’il n’y a toujours pas de session, l’erreur est réelle */
+        if (!sess && error) throw error;
+    };
+
+    const signUp = async ({
+        email,
+        password,
+    }: {
+        email: string;
+        password: string;
+    }) => {
+        setLoading(true);
+
+        const { error } = await supabase.auth.signUp({ email, password });
+        await refreshSession(); // peut demeurer null (e-mail à confirmer)
+
+        setLoading(false);
+
         if (error) throw error;
     };
 
     const signOut = async () => {
         setLoading(true);
         await supabase.auth.signOut();
+        setSession(null);
         setLoading(false);
     };
 
