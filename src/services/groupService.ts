@@ -50,16 +50,16 @@ export const createGroup = async (name: string): Promise<Group> => {
 export const addMembers = async (
     groupId: string,
     userIds: string[],
-): Promise<void> => {
-    const rows = userIds.map((id) => ({
-        group_id: groupId,
-        user_id: id,
-        role: 'member' as const,
-    }));
-    const { error } = await supabase.from(MEMBERS_TABLE).upsert(rows, {
-        onConflict: 'group_id,user_id',
+): Promise<number> => {
+    if (userIds.length === 0) return 0;
+
+    const { data, error } = await supabase.rpc('add_group_members', {
+        p_group_id: groupId,
+        p_user_ids: userIds,
     });
+
     if (error) throw error;
+    return data as number; // nombre réellement ajouté
 };
 
 /* ────────────────────────────────

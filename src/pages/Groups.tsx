@@ -116,9 +116,9 @@ const Groups: React.FC = () => {
         if (role !== 'confirm') return;
 
         const name = (data.values.groupName ?? '').trim();
-        const ids: string[] = Array.isArray(data.values.contacts)
-            ? data.values.contacts
-            : [];
+        /* Normalise en tableau (IonAlert → string | string[]) */
+        const raw = data.values.contacts ?? [];
+        const ids: string[] = Array.isArray(raw) ? raw : [raw];
 
         if (!name) return setToast('Group name required');
 

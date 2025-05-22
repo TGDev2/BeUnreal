@@ -107,9 +107,9 @@ const GroupChat: React.FC = () => {
         };
         if (role !== 'confirm') return;
 
-        const ids: string[] = Array.isArray(data.values.contacts)
-            ? data.values.contacts
-            : [];
+        /* Normalise en tableau (IonAlert → string | string[]) */
+        const raw = data.values.contacts ?? [];
+        const ids: string[] = Array.isArray(raw) ? raw : [raw];
 
         if (ids.length === 0) return;
 
